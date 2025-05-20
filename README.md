@@ -60,3 +60,7 @@ azd deploy mcpServer
 The code will be packaged and deployed to the App Service with the tag `azd-service:mcpServer`
 
 From there, you can interact with the MCP server over `SSE` via the `https:\\webappname.azurewebsites.net\sse` endpoint using the MCP inspector you have running from the commands above.
+
+## Container Images (Preview)
+
+We will be publishing a set of container images that represent the `golden` images based on the repo releases. You will be able to directly pull from these public container registries for fast deployment
