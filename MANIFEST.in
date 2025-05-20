@@ -1,0 +1,2 @@
+global-exclude agents/custom/*
+global-exclude tools/custom/*
