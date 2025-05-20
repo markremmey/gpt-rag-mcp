@@ -164,9 +164,6 @@ if (use_code_interpreter):
 
 server = kernel.as_mcp_server(server_name="sk")
 
-mcp_mode = "sse"
-mcp_host = "local"
-
 logger.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
 if (mcp_mode == "stdio"):
     # Run as stdio server
