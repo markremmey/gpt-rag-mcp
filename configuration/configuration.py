@@ -19,14 +19,19 @@ class Configuration:
             self.tenant_id = os.environ.get('AZURE_TENANT_ID', "*")
         except Exception as e:
             raise e
+
+        try:
+            self.client_id = os.environ.get('AZURE_CLIENT_ID', None)
+        except Exception as e:
+            raise e
         
         self.credential = ChainedTokenCredential(
-                ManagedIdentityCredential(),
+                ManagedIdentityCredential(client_id=self.client_id),
                 AzureCliCredential()
             )
         
         self.aiocredential = AsyncChainedTokenCredential(
-                AsyncManagedIdentityCredential(),
+                AsyncManagedIdentityCredential(client_id=self.client_id),
                 AsyncAzureCliCredential()
             )
 
