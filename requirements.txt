@@ -1,5 +1,5 @@
-mcp[cli]
-semantic-kernel
+#mcp[cli]==1.8.1  #manually copied into app package (with modifications)
+semantic-kernel==1.31.0
 
 azure-keyvault-secrets
 azure-cosmos
@@ -14,7 +14,7 @@ tenacity
 uv
 
 fastapi
-fastapi-mcp
+fastapi-mcp==0.3.4
 
 gunicorn
 uvicorn
@@ -27,6 +27,19 @@ autogen_ext==0.5.7
 tiktoken
 sqlparse
 pyodbc
+
+#excel
+openpyxl
+
+#word
+python-docx
+
+#databricks
+pyspark==3.4.4
+#databricks-sdk
+#databricks-connect==12.2.45
+#databricks-sql-connector
+pandas
 
 #code interpreter
 azure-ai-projects

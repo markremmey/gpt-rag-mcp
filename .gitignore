@@ -2,6 +2,7 @@
 tools/custom/*
 agents/custom/*
 tool_config_custom.json
+starlette/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

@@ -1,4 +1,5 @@
 from .aoai import AzureOpenAIConnector
+from .azureaisearch import AzureAISearch
 from .blob import BlobClient, BlobContainerClient
 from .cosmosdb import CosmosDBClient
 from .fabric import SQLEndpointClient, SemanticModelClient

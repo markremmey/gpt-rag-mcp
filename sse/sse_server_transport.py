@@ -82,7 +82,7 @@ class FastApiSseServerTransport:
                     await sse_stream_writer.send(
                         {
                             "event": "message",
-                            "data": message.model_dump_json(
+                            "data": message.message.model_dump_json(
                                 by_alias=True, exclude_none=True
                             ),
                         }
@@ -100,12 +100,12 @@ class FastApiSseServerTransport:
 
     async def handle_post_message(
         self, request : fastapi.Request
-    ) -> None:
+    ) -> fastapi.Response:
         return await self.handle_post_message_core(request.scope, request._receive, request._send)
 
     async def handle_post_message_core(
         self, scope: Scope, receive: Receive, send: Send
-    ) -> None:
+    ) -> fastapi.Response:
         logger.debug("Handling POST message")
         request = Request(scope, receive)
 
@@ -113,7 +113,7 @@ class FastApiSseServerTransport:
         if session_id_param is None:
             logger.warning("Received request without session_id")
             response = Response("session_id is required", status_code=400)
-            return await response(scope, receive, send)
+            return response
 
         try:
             session_id = UUID(hex=session_id_param)
@@ -121,13 +121,13 @@ class FastApiSseServerTransport:
         except ValueError:
             logger.warning(f"Received invalid session ID: {session_id_param}")
             response = Response("Invalid session ID", status_code=400)
-            return await response(scope, receive, send)
+            return response
 
         writer = self._read_stream_writers.get(session_id)
         if not writer:
             logger.warning(f"Could not find session for ID: {session_id}")
             response = Response("Could not find session", status_code=404)
-            return await response(scope, receive, send)
+            return response
 
         body = await request.body()
         logger.debug(f"Received JSON: {body}")
@@ -138,11 +138,10 @@ class FastApiSseServerTransport:
         except ValidationError as err:
             logger.error(f"Failed to parse message: {err}")
             response = Response("Could not parse message", status_code=400)
-            await response(scope, receive, send)
             await writer.send(err)
-            return
+            return response
 
         logger.debug(f"Sending message to writer: {message}")
-        response = Response("Accepted", status_code=202)
-        await response(scope, receive, send)
+        response = Response('Accepted', status_code=202)
         await writer.send(message)
+        return response

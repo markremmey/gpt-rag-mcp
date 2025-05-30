@@ -1,4 +1,5 @@
 import os
+import contextlib
 import json
 import asyncio
 import logging
@@ -8,13 +9,22 @@ import anyio
 import uvicorn
 import fastapi
 
+from collections.abc import AsyncIterator
+from contextvars import ContextVar
 from datetime import datetime
 
 from fastapi import FastAPI
 from fastapi_mcp import FastApiMCP
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import PlainTextResponse
 
+from typing import Optional
+
+from mcp.server.lowlevel import Server
+from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from mcp.server.stdio import stdio_server
 from mcp.server.sse import SseServerTransport
+from mcp.server.fastmcp import FastMCP
 
 from dotenv import load_dotenv
 from semantic_kernel import Kernel
@@ -27,17 +37,20 @@ from semantic_kernel.exceptions.function_exceptions import \
 from starlette.applications import Starlette
 from starlette.endpoints import WebSocketEndpoint
 from starlette.routing import Mount, Host, Route, WebSocketRoute
-from starlette.exceptions import HTTPException
 from starlette.requests import Request
 from starlette.responses import HTMLResponse, JSONResponse, PlainTextResponse
 from starlette.middleware import Middleware
 from starlette.middleware.httpsredirect import HTTPSRedirectMiddleware
 from starlette.middleware.trustedhost import TrustedHostMiddleware
-
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.types import Receive, Scope, Send
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential,get_bearer_token_provider
 
+from middleware.authentication_middleware import AuthenticationMiddleware
 from sse import FastApiSseServerTransport
+
+from event_store import InMemoryEventStore
 
 load_dotenv()  # Load environment variables from .env file
 
@@ -87,8 +100,10 @@ config = Configuration()
 #MCP Settings
 mcp_port = int(config.get_value("AZURE_MCP_SERVER_PORT", default=5000))
 mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240)
-mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="sse")
+mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="fastapi")
+mcp_transport = config.get_value("AZURE_MCP_SERVER_TRANSPORT", default="sse")
 mcp_host = config.get_value("AZURE_MCP_SERVER_HOST", default="local")
+json_response = config.get_value("AZURE_MCP_SERVER_JSON", default=True)
 
 #OPEN AI SETTTINGS
 deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
@@ -121,15 +136,6 @@ def load_tools_from_file(file_name):
 
         #for each tool, load the class and add it to the kernel
         for tool in tools_to_load:
-            
-            if 'enabled' in tool:
-                if not tool['enabled']:
-                    logging.info(f"Tool {tool['name']} not enabled, skipping")
-                    continue
-            else:
-                logging.info(f"Tool {tool['name']} not enabled, skipping")
-                continue
-            
             try:
                 logging.info(f"Loading tool: {tool['name']}")
                 module = __import__(tool["module"], fromlist=[tool["class"]])
@@ -164,6 +170,12 @@ if (use_code_interpreter):
 
 server = kernel.as_mcp_server(server_name="sk")
 
+#mcp_mode = "fastapi"
+#mcp_transport = "sse" # "stateless" or "sse" or "stdio"
+#mcp_host = "local"
+
+fastapi_request_var: ContextVar[Optional[Request]] = ContextVar('fastapi_request', default=None)
+
 logger.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
 if (mcp_mode == "stdio"):
     # Run as stdio server
@@ -174,15 +186,66 @@ if (mcp_mode == "stdio"):
     #for local testing
     anyio.run(handle_stdin)
 
-elif (mcp_mode == "fastapi"):
+elif (mcp_transport == "stateless"):
+    #https://github.com/modelcontextprotocol/python-sdk/blob/main/examples/servers/simple-streamablehttp-stateless/mcp_simple_streamablehttp_stateless/server.py
+    event_store = InMemoryEventStore()
+
+    # Create the session manager with our app and event store
+    session_manager = StreamableHTTPSessionManager(
+        app=server,
+        event_store=event_store,  # Enable resumability
+        json_response=json_response,
+    )
+
+    async def handle_streamable_http(
+        scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        await session_manager.handle_request(scope, receive, send)
+
+    @contextlib.asynccontextmanager
+    async def lifespan(app: Starlette) -> AsyncIterator[None]:
+        """Context manager for managing session manager lifecycle."""
+        async with session_manager.run():
+            logger.info("Application started with StreamableHTTP session manager!")
+            try:
+                yield
+            finally:
+                logger.info("Application shutting down...")
+
+    app = Starlette(
+        debug=True,
+        routes=[
+            Mount("/mcp", app=handle_streamable_http),
+        ],
+        lifespan=lifespan,
+    )
+
+elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     # Add the MCP server to your FastAPI app
     app = FastAPI()
+
+    def set_fastapi_request(request: fastapi.Request):
+        fastapi_request_var.set(request)
 
     #https://microsoft.github.io/autogen/stable//reference/python/autogen_ext.tools.mcp.html
     # Create an SSE transport at an endpoint
     sse = FastApiSseServerTransport("/messages/")
 
+    #async def handle_post_message(scope, recieve, send):
+    async def handle_post_message(request: fastapi.Request) -> fastapi.Response:
+        #set the request context for downstream tools
+        set_fastapi_request(request.scope)
+
+        try:
+            return await sse.handle_post_message(request)
+        except Exception as e:
+            logger.error(f"Error in handle_post_message: {e}")
+            return PlainTextResponse(str(e), status_code=500)
+
     async def handle_sse(request : fastapi.Request):
+        #set the request context for downstream tools
+        set_fastapi_request(request)
+
         try:
             async with sse.connect_sse(
                 request.scope, request._receive, request._send
@@ -196,19 +259,44 @@ elif (mcp_mode == "fastapi"):
             logger.error(f"Error in SSE connection: {e}")
 
     async def handle_root(request):
-        return PlainTextResponse("Homepage")
+        return PlainTextResponse("Welcome to the GPT RAG MCP Server.")
 
     app.add_route("/", route=handle_root, methods=["GET", "POST"])
     app.add_route("/sse", route=handle_sse, methods=["GET", "POST"])
-    app.add_route("/messages", route=sse.handle_post_message, methods=["GET", "POST"])
+    app.add_route("/messages", route=handle_post_message, methods=["GET", "POST"])
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_exception_handler(request, exc):
+        return PlainTextResponse(str(exc.detail), status_code=exc.status_code)
+
+
+    @app.exception_handler(RequestValidationError)
+    async def validation_exception_handler(request, exc):
+        return PlainTextResponse(str(exc), status_code=400)
     
 elif (mcp_mode == "sse"):
     #https://microsoft.github.io/autogen/stable//reference/python/autogen_ext.tools.mcp.html
     # Create an SSE transport at an endpoint
     sse = SseServerTransport("/messages/")
 
+    def set_fastapi_request(request: Request):
+        fastapi_request_var.set(request)
+
+    async def handle_post_message(scope, recieve, send):
+        #set the request context for downstream tools
+        set_fastapi_request(scope)
+
+        try:
+            return await sse.handle_post_message(scope, recieve, send)
+        except Exception as e:
+            #reinit server
+            #server = kernel.as_mcp_server(server_name="sk")
+            logger.error(f"Error in SSE connection: {e}")
+
     # Define handler functions
     async def handle_sse(request):
+
+        set_fastapi_request(request)
 
         try:
             async with sse.connect_sse(
@@ -225,26 +313,26 @@ elif (mcp_mode == "sse"):
     async def homepage(request: Request):
         return PlainTextResponse("Homepage")
 
-    async def not_found(request: Request, exc: HTTPException):
+    async def not_found(request: Request, exc: StarletteHTTPException):
         return HTMLResponse(content='404', status_code=exc.status_code)
 
-    async def server_error(request: Request, exc: HTTPException):
+    async def server_error(request: Request, exc: StarletteHTTPException):
         return HTMLResponse(content='500', status_code=exc.status_code)
 
-    async def http_exception(request: Request, exc: HTTPException):
+    async def http_exception(request: Request, exc: StarletteHTTPException):
         return JSONResponse({"detail": exc.detail}, status_code=exc.status_code)
 
     exception_handlers = {
         404: not_found,
         500: server_error,
-        HTTPException: http_exception
+        StarletteHTTPException: http_exception
     }
 
     middleware = [
         Middleware(
             TrustedHostMiddleware,
             allowed_hosts=['*'],
-        ),
+        )
         #Middleware(HTTPSRedirectMiddleware)
     ]
 
@@ -252,12 +340,13 @@ elif (mcp_mode == "sse"):
     routes = [
         Route("/", endpoint=homepage, methods=["GET"]),
         Route("/sse", endpoint=handle_sse, methods=["GET", "POST"]),
-        Mount("/messages/", app=sse.handle_post_message),
+        Mount("/messages/", app=handle_post_message),
         #WebSocketRoute("/ws", endpoint=WebsocketServer)
     ]
 
     # Create and run Starlette app
     app = Starlette(debug=True,routes=routes) #, exception_handlers=exception_handlers, middleware=middleware)   
+    app.add_middleware(AuthenticationMiddleware)
 
 if (mcp_host == "local"):
     # Run the app locally
