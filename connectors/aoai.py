@@ -4,6 +4,7 @@ import tiktoken
 import time
 from openai import AzureOpenAI, RateLimitError
 from azure.identity import ManagedIdentityCredential, AzureCliCredential, ChainedTokenCredential, get_bearer_token_provider
+from configuration import Configuration
 
 MAX_RETRIES = 10 # Maximum number of retries for rate limit errors
 MAX_EMBEDDINGS_MODEL_INPUT_TOKENS = 8192
@@ -16,12 +17,12 @@ class AzureOpenAIConnector:
     Delays between retries start at 0.5 seconds, doubling up to 8 seconds.
     If a rate limit error occurs after retries, the client will retry once more after the retry-after-ms header duration (if the header is present).
     """
-    def __init__(self, config=None):
+    def __init__(self, config : Configuration=None):
         """
         Initializes the AzureOpenAI client.
 
         """     
-        self.config = config   
+        self.config = config
         self.openai_service_name = self.config.get_value('AZURE_OPENAI_RESOURCE')
         self.openai_api_base = f"https://{self.openai_service_name}.openai.azure.com"
         self.openai_api_version = self.config.get_value('AZURE_OPENAI_API_VERSION')

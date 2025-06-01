@@ -47,6 +47,20 @@ We have started with a common set of tools that we use for the [GPT-RAG-AGENITC]
   - [Custom Tool](/docs/samples/custom_tool.md)
   - [Function Triggers](/docs/samples/function_trigger.md)
 
+## Architecture
+
+Zero Trust (ZTA)
+
+![Zero Trust Architecture](media/architecture-zta.png "Zero Trust Architecture")
+
+Model Context Protocol (MCP) Server
+
+![Model Context Protocol (MCP) Server](media/mcp-server.png "Model Context Protocol (MCP) Server")
+
+Model Context Protocol (MCP) Flow
+
+![Model Context Protocol (MCP) Flow](media/mcp-flow.png "Model Context Protocol (MCP) Flow")
+
 ## Testing
 
 - Clone the repo to `c:\github\azure`
