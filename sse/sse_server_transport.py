@@ -107,7 +107,7 @@ class FastApiSseServerTransport:
         self, scope: Scope, receive: Receive, send: Send
     ) -> fastapi.Response:
         logger.debug("Handling POST message")
-        request = Request(scope, receive)
+        request = Request(scope, receive, send)
 
         session_id_param = request.query_params.get("session_id")
         if session_id_param is None:
@@ -132,12 +132,15 @@ class FastApiSseServerTransport:
         body = await request.body()
         logger.debug(f"Received JSON: {body}")
 
+        # if body == b"":
+        #     body = b'{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{"sampling":{},"roots":{"listChanged":true}},"clientInfo":{"name":"mcp-inspector","version":"0.13.0"}}}'
+
         try:
             message = types.JSONRPCMessage.model_validate_json(body)
             logger.debug(f"Validated client message: {message}")
         except ValidationError as err:
             logger.error(f"Failed to parse message: {err}")
-            response = Response("Could not parse message", status_code=400)
+            response = Response(f"Could not parse message: {err}", status_code=400)
             await writer.send(err)
             return response
 

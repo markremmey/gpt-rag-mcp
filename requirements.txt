@@ -14,7 +14,9 @@ tenacity
 uv
 
 fastapi
-fastapi-mcp==0.3.4
+#fastapi-mcp==0.3.4
+sse_starlette
+httpx_sse
 
 gunicorn
 uvicorn

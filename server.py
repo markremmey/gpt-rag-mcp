@@ -9,6 +9,7 @@ import anyio
 import uvicorn
 import fastapi
 
+from connectors import CosmosDBClient
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
@@ -91,7 +92,14 @@ def auth_callback_factory(scope):
     
     return auth_callback
 
-# Apply the logging configuration
+# Add console to logging
+logging.basicConfig(
+    level=logging.DEBUG,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 logger = logging.getLogger(__name__)  # Use a module-specific logger
 
 from configuration import Configuration
@@ -120,42 +128,62 @@ token_provider = get_bearer_token_provider(
         )
 kernel.add_service(AzureChatCompletion(service_id="default", deployment_name=deployment_name, api_version=api_version, endpoint=endpoint, ad_token_provider=token_provider))
 
+cosmos = CosmosDBClient(config=config)
+
+def load_tools_from_json(tool_config):
+    agents_to_load = tool_config.get("agents", [])
+    tools_to_load = tool_config.get('tools', [])
+
+    for agent in agents_to_load:
+        #TODO
+        pass
+
+    #for each tool, load the class and add it to the kernel
+    for tool in tools_to_load:
+        try:
+            logging.info(f"Loading tool: {tool['name']}")
+            module = __import__(tool["module"], fromlist=[tool["class"]])
+            tool_class = getattr(module, tool["class"])
+            tool['settings']['config'] = config
+            tool_instance = tool_class(settings=tool["settings"])
+            
+            # If the class has a plug_in attribute, use it
+            if 'plug_in' in tool_instance.__dict__:
+                kernel.add_plugin(tool_instance.plug_in, tool["name"])
+            else:
+                kernel.add_plugin(tool_instance, tool["name"])
+            
+            logger.info(f"Loaded tool: {tool['name']}")
+        except Exception as e:
+            logger.error(f"Failed to load tool {tool['name']}: {e}")
+            continue
+
+def load_tools_from_cosmos(container_name, document_id):
+    logger.info(f"Loading tools from cosmos {container_name} : {document_id}")
+    try:
+        tool_config = cosmos.get_document(container_name, document_id)
+        
+        if tool_config is None:
+            logger.error(f"Tool configuration document {document_id} not found in container {container_name}.")
+            return
+
+        load_tools_from_json(tool_config)
+
+    except Exception as e:
+        logger.error(f"Error loading tools from Cosmos DB: {e}")
+
 def load_tools_from_file(file_name):
+    logger.info(f"Loading tools from {file_name}")
     #load the tool_config.json
     tool_config = os.path.join(os.path.dirname(__file__), file_name)
     if os.path.exists(tool_config):
         with open(tool_config, "r") as f:
             tool_config = json.load(f)
 
-        agents_to_load = tool_config.get("agents", [])
-        tools_to_load = tool_config.get('tools', [])
+        load_tools_from_json(tool_config)
 
-        for agent in agents_to_load:
-            #TODO
-            pass
-
-        #for each tool, load the class and add it to the kernel
-        for tool in tools_to_load:
-            try:
-                logging.info(f"Loading tool: {tool['name']}")
-                module = __import__(tool["module"], fromlist=[tool["class"]])
-                tool_class = getattr(module, tool["class"])
-                tool['settings']['config'] = config
-                tool_instance = tool_class(settings=tool["settings"])
-                
-                # If the class has a plug_in attribute, use it
-                if 'plug_in' in tool_instance.__dict__:
-                    kernel.add_plugin(tool_instance.plug_in, tool["name"])
-                else:
-                    kernel.add_plugin(tool_instance, tool["name"])
-                
-                logger.info(f"Loaded tool: {tool['name']}")
-            except Exception as e:
-                logger.error(f"Failed to load tool {tool['name']}: {e}")
-                continue
-
-load_tools_from_file("tool_config.json")
-load_tools_from_file("tool_config_custom.json")
+load_tools_from_cosmos("mcp", "tool_config")
+load_tools_from_cosmos("mcp", "tool_config_custom")
 
 if (use_code_interpreter):
     logger.info("Loading Code Interpreter")
