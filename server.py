@@ -15,7 +15,7 @@ from contextvars import ContextVar
 from datetime import datetime
 
 from fastapi import FastAPI
-from fastapi_mcp import FastApiMCP
+#from fastapi_mcp import FastApiMCP
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse
 
@@ -47,6 +47,10 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from starlette.types import Receive, Scope, Send
 from azure.core.exceptions import ClientAuthenticationError
 from azure.identity import DefaultAzureCredential,get_bearer_token_provider
+
+from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+
+from lifespan_manager import lifespan
 
 from middleware.authentication_middleware import AuthenticationMiddleware
 from sse import FastApiSseServerTransport
@@ -230,16 +234,6 @@ elif (mcp_transport == "stateless"):
     ) -> None:
         await session_manager.handle_request(scope, receive, send)
 
-    @contextlib.asynccontextmanager
-    async def lifespan(app: Starlette) -> AsyncIterator[None]:
-        """Context manager for managing session manager lifecycle."""
-        async with session_manager.run():
-            logger.info("Application started with StreamableHTTP session manager!")
-            try:
-                yield
-            finally:
-                logger.info("Application shutting down...")
-
     app = Starlette(
         debug=True,
         routes=[
@@ -250,7 +244,9 @@ elif (mcp_transport == "stateless"):
 
 elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     # Add the MCP server to your FastAPI app
-    app = FastAPI()
+    app = FastAPI(lifespan=lifespan)
+
+    FastAPIInstrumentor.instrument_app(app)
 
     def set_fastapi_request(request: fastapi.Request):
         fastapi_request_var.set(request)

@@ -9,6 +9,8 @@ azure-mgmt-storage
 azure-storage-blob
 azure.appconfiguration
 azure.appconfiguration.provider
+azure-monitor-opentelemetry==1.6.10
+azure-monitor-opentelemetry-exporter==1.0.0b37
 
 tenacity
 uv
