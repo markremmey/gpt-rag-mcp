@@ -39,6 +39,8 @@ class AzureBlobPlugin(BasePlugin):
         self.description = settings.get("description","")
         self.description_process_document = settings.get(f"description_process_document",f"Will retrieve documents from the {self.container_name} blob storage container.")
         
+        self.parent_container_name = settings.get("parent_container_name", None)
+        
         super().reset_kernel_functions(settings)
 
 

@@ -54,6 +54,7 @@ class CosmosDBClient:
 
 
     def get_document(self, container, key) -> dict: 
+        logging.info(f"[cosmosdb] retrieving document {key} from container {container}")
         container = self.db.get_container_client(container)
         try:
             document = container.read_item(item=key, partition_key=key)
