@@ -6,3 +6,5 @@ from .azureblob import AzureBlobPlugin
 #from .code_interpreter_aca import CodeInterpreterACAPlugin
 #from .code_interpreter_ai_project import CodeInterpreterAIProjectPlugin
 from .speechtotext import SpeechToTextPlugin
+from .document_intelligence import DocIntelligencePlugin
+from .openai import OpenAIPlugin

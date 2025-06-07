@@ -2,13 +2,14 @@ import inspect
 import copy
 import datetime
 
+from datetime import datetime, timedelta
 from io import IOBase as IO
 
 from typing import Annotated, Any, Dict, Union
 from semantic_kernel.functions import kernel_function
 from connectors import BlobContainerClient, BlobClient
 
-from azure.storage.blob import BlobServiceClient
+from azure.storage.blob import BlobServiceClient,BlobSasPermissions, generate_blob_sas
 
 from .base_plugin import BasePlugin
 from configuration import Configuration
@@ -29,6 +30,9 @@ class AzureBlobPlugin(BasePlugin):
         self.blob_container_client = BlobContainerClient(storage_account_base_url=f"https://{self.storage_account}.blob.core.windows.net", 
                                                          container_name=self.container_name,
                                                          credential=self.config.credential)
+        
+        self.blob_service_client = BlobServiceClient(account_url=f"https://{self.storage_account}.blob.core.windows.net", credential=self.config.credential)
+
         
         self.prefix = settings.get("prefix","")
         self.suffix = settings.get("suffix","")
@@ -130,6 +134,29 @@ class AzureBlobPlugin(BasePlugin):
             blob_client.upload_blob(data, overwrite=True)
         else:
             raise ValueError("Unsupported data type for upload")
+
+    def create_sas_token(
+        self, container_name: str, blob_name: str, expiry: datetime = None
+    ) -> str:
+        
+        if expiry is None:
+            expiry = datetime.utcnow() + timedelta(hours=1)
+        
+        user_delegation_key = self.blob_service_client.get_user_delegation_key(
+            key_start_time=datetime.utcnow(),
+            key_expiry_time=expiry  # Key expiry in 1 hour
+        )
+
+        sas_token = generate_blob_sas(
+            account_name=self.storage_account,
+            container_name=container_name,
+            blob_name=blob_name,
+            user_delegation_key=user_delegation_key,
+            permission=BlobSasPermissions(read=True),  # Example: Read permission
+            expiry=datetime.utcnow() + timedelta(hours=1),  # SAS expiry in 1 hour
+        )
+        
+        return sas_token
 
         
     @kernel_function(

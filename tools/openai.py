@@ -16,7 +16,7 @@ class OpenAIPlugin(ModelPlugin):
         name="run_llm_model",
         description="Runs a LLM model with the given prompt.",
     )
-    def search(self, 
+    def run_llm_model(self, 
             user_prompt: str):
         """
         Runs a LLM model with the given prompt.
