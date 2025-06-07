@@ -1,6 +1,6 @@
 from typing import Annotated, Dict
 from semantic_kernel.functions import kernel_function
-from .base_plugin import BasePlugin
+from ..base_plugin import BasePlugin
 
 class LightsPlugin(BasePlugin):
     lights = [

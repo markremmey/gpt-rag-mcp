@@ -2,7 +2,9 @@ import inspect
 import copy
 import datetime
 
-from typing import Annotated, Any, Dict
+from io import IOBase as IO
+
+from typing import Annotated, Any, Dict, Union
 from semantic_kernel.functions import kernel_function
 from connectors import BlobContainerClient, BlobClient
 
@@ -15,7 +17,6 @@ class AzureBlobPlugin(BasePlugin):
     """
     Azure Blob Storage Plugin
     """
-    credential: DefaultAzureCredential = None
     blob_service_client: BlobServiceClient = None
 
     def __init__(self, settings : Dict= {}):
