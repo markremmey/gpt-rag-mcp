@@ -2,7 +2,7 @@
 
 Welcome to the GPT-RAG Model Context Protocol (MCP) Server for the GPT-RAG series of repos. Note these currently point at the `givenscj` fork due to some reorganizing of the repos. The original repos are available in the `azure` organization, but will not currenlty work with the MCP server.
 
-- [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration]
+- [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration branch]
 - [GPT-RAG-AGENTIC](https://github.com/givenscj/gpt-rag-agentic)
 - [GPT-RAG-ORCHESTATOR](https://github.com/givenscj/gpt-rag-orchestrator)
 - [GPT-RAG-FRONTEND](https://github.com/givenscj/gpt-rag-frontend)
