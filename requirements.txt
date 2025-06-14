@@ -11,6 +11,7 @@ azure.appconfiguration
 azure.appconfiguration.provider
 azure-monitor-opentelemetry==1.6.10
 azure-monitor-opentelemetry-exporter==1.0.0b37
+azure-cognitiveservices-speech
 
 tenacity
 uv
@@ -53,3 +54,7 @@ wikipedia
 
 ##Bing
 azure-cognitiveservices-search-websearch
+
+#neo4j
+neo4j-graphrag
+neo4j-graphrag[openai]

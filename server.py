@@ -115,6 +115,23 @@ elif level == 'CRITICAL':
 # Add console to logging
 logging.basicConfig(level=level, force=True)
 
+level=config.get_value('LOGLEVEL', 'DEBUG').upper()
+
+#convert to logging level
+if level == 'DEBUG':    
+    level = logging.DEBUG
+elif level == 'INFO':
+    level = logging.INFO
+elif level == 'WARNING':
+    level = logging.WARNING
+elif level == 'ERROR':
+    level = logging.ERROR
+elif level == 'CRITICAL':
+    level = logging.CRITICAL
+
+# Add console to logging
+logging.basicConfig(level=level, force=True)
+
 #MCP Settings
 mcp_port = int(config.get_value("AZURE_MCP_SERVER_PORT", default=5000))
 mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240)
