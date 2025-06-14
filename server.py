@@ -14,7 +14,7 @@ from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, APIRouter
 #from fastapi_mcp import FastApiMCP
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse
@@ -57,7 +57,7 @@ from sse import FastApiSseServerTransport
 
 from event_store import InMemoryEventStore
 
-load_dotenv()  # Load environment variables from .env file
+from dependencies import API_NAME, get_config, validate_api_key_header
 
 class WebsocketServer(WebSocketEndpoint):
     encoding = "bytes"
@@ -96,18 +96,24 @@ def auth_callback_factory(scope):
     
     return auth_callback
 
-# Add console to logging
-logging.basicConfig(
-    level=logging.DEBUG,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-logger = logging.getLogger(__name__)  # Use a module-specific logger
+config = get_config()
 
-from configuration import Configuration
-config = Configuration()
+level=config.get_value('LOGLEVEL', 'DEBUG').upper()
+
+#convert to logging level
+if level == 'DEBUG':    
+    level = logging.DEBUG
+elif level == 'INFO':
+    level = logging.INFO
+elif level == 'WARNING':
+    level = logging.WARNING
+elif level == 'ERROR':
+    level = logging.ERROR
+elif level == 'CRITICAL':
+    level = logging.CRITICAL
+
+# Add console to logging
+logging.basicConfig(level=level, force=True)
 
 #MCP Settings
 mcp_port = int(config.get_value("AZURE_MCP_SERVER_PORT", default=5000))
@@ -122,7 +128,7 @@ deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat
 api_version = config.get_value("AZURE_OPENAI_API_VERSION")
 endpoint = config.get_value("AZURE_OPENAI_ENDPOINT")
 
-use_code_interpreter = config.get_value("USE_CODE_INTERPRETER", default=False)
+use_code_interpreter = bool(config.get_value("USE_CODE_INTERPRETER", default=False))
 pool_management_endpoint = config.get_value("POOL_MANAGEMENT_ENDPOINT", default="https://dynamicsessions.io")
 
 kernel = Kernel()
@@ -157,27 +163,27 @@ def load_tools_from_json(tool_config):
             else:
                 kernel.add_plugin(tool_instance, tool["name"])
             
-            logger.info(f"Loaded tool: {tool['name']}")
+            logging.info(f"Loaded tool: {tool['name']}")
         except Exception as e:
-            logger.error(f"Failed to load tool {tool['name']}: {e}")
+            logging.error(f"Failed to load tool {tool['name']}: {e}")
             continue
 
 def load_tools_from_cosmos(container_name, document_id):
-    logger.info(f"Loading tools from cosmos {container_name} : {document_id}")
+    logging.info(f"Loading tools from cosmos {container_name} : {document_id}")
     try:
         tool_config = cosmos.get_document(container_name, document_id)
         
         if tool_config is None:
-            logger.error(f"Tool configuration document {document_id} not found in container {container_name}.")
+            logging.error(f"Tool configuration document {document_id} not found in container {container_name}.")
             return
 
         load_tools_from_json(tool_config)
 
     except Exception as e:
-        logger.error(f"Error loading tools from Cosmos DB: {e}")
+        logging.error(f"Error loading tools from Cosmos DB: {e}")
 
 def load_tools_from_file(file_name):
-    logger.info(f"Loading tools from {file_name}")
+    logging.info(f"Loading tools from {file_name}")
     #load the tool_config.json
     tool_config = os.path.join(os.path.dirname(__file__), file_name)
     if os.path.exists(tool_config):
@@ -190,7 +196,7 @@ load_tools_from_cosmos("mcp", "tool_config")
 load_tools_from_cosmos("mcp", "tool_config_custom")
 
 if (use_code_interpreter):
-    logger.info("Loading Code Interpreter")
+    logging.info("Loading Code Interpreter")
     sessions_tool = SessionsPythonTool(
         pool_management_endpoint=pool_management_endpoint,
         auth_callback=auth_callback_factory("https://dynamicsessions.io/.default")
@@ -208,7 +214,7 @@ server = kernel.as_mcp_server(server_name="sk")
 
 fastapi_request_var: ContextVar[Optional[Request]] = ContextVar('fastapi_request', default=None)
 
-logger.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
+logging.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
 if (mcp_mode == "stdio"):
     # Run as stdio server
     async def handle_stdin():
@@ -239,12 +245,25 @@ elif (mcp_transport == "stateless"):
         routes=[
             Mount("/mcp", app=handle_streamable_http),
         ],
+        dependencies=[Depends(validate_api_key_header)],
         lifespan=lifespan,
     )
 
 elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     # Add the MCP server to your FastAPI app
-    app = FastAPI(lifespan=lifespan)
+    app = FastAPI(
+        title=API_NAME,
+        description="MCP Server for GPT RAG",
+        version="1.0.0",
+        lifespan=lifespan,
+        #dependencies=[Depends(validate_api_key_header)],
+        config=config
+    )
+
+    message_router = APIRouter(
+        dependencies=[Depends(validate_api_key_header)],
+        responses={404: {'description':'Not found'}}
+    )
 
     FastAPIInstrumentor.instrument_app(app)
 
@@ -256,19 +275,28 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     sse = FastApiSseServerTransport("/messages/")
 
     #async def handle_post_message(scope, recieve, send):
+    @message_router.post('/messages')
     async def handle_post_message(request: fastapi.Request) -> fastapi.Response:
         #set the request context for downstream tools
         set_fastapi_request(request.scope)
 
+        #check the api-key header
+        #if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
+        #    return PlainTextResponse("Unauthorized", status_code=401)
+
         try:
             return await sse.handle_post_message(request)
         except Exception as e:
-            logger.error(f"Error in handle_post_message: {e}")
+            logging.error(f"Error in handle_post_message: {e}")
             return PlainTextResponse(str(e), status_code=500)
 
     async def handle_sse(request : fastapi.Request):
         #set the request context for downstream tools
         set_fastapi_request(request)
+
+        #check the api-key header
+        #if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
+        #    return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
             async with sse.connect_sse(
@@ -280,14 +308,15 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logger.error(f"Error in SSE connection: {e}")
+            logging.error(f"Error in SSE connection: {e}")
 
     async def handle_root(request):
         return PlainTextResponse("Welcome to the GPT RAG MCP Server.")
 
     app.add_route("/", route=handle_root, methods=["GET", "POST"])
     app.add_route("/sse", route=handle_sse, methods=["GET", "POST"])
-    app.add_route("/messages", route=handle_post_message, methods=["GET", "POST"])
+    #app.include_router(message_router)
+    app.add_route("/messages", route=handle_post_message, methods=["POST"])
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request, exc):
@@ -315,12 +344,16 @@ elif (mcp_mode == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logger.error(f"Error in SSE connection: {e}")
+            logging.error(f"Error in SSE connection: {e}")
 
     # Define handler functions
     async def handle_sse(request):
 
         set_fastapi_request(request)
+
+        #check the api-key header
+        if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
+            return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
             async with sse.connect_sse(
@@ -332,7 +365,7 @@ elif (mcp_mode == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logger.error(f"Error in SSE connection: {e}")
+            logging.error(f"Error in SSE connection: {e}")
 
     async def homepage(request: Request):
         return PlainTextResponse("Homepage")
