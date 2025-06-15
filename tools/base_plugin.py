@@ -49,6 +49,15 @@ class BasePlugin():
     settings : Dict = {}
     config : Configuration = None
 
+    has_oauth_endpoint: bool = False
+    oauth_endpoint : str = None
+
+    def handle_oauth_token(scope, send, receive):
+        raise NotImplementedError("OAuth handling is not implemented for this plugin.")
+
+    def handle_oauth_authorize(scope, send, receive):
+        raise NotImplementedError("OAuth handling is not implemented for this plugin.")
+
     def __init__(self, settings : Dict= {}):
 
         logging.info(f"Creating ${__name__}")

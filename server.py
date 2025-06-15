@@ -105,20 +105,20 @@ config = get_config()
 Telemetry.configure_basic(config)
 
 #MCP Settings
-mcp_port = int(config.get_value("AZURE_MCP_SERVER_PORT", default=5000))
-mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240)
+mcp_port = config.get_value("AZURE_MCP_SERVER_PORT", default=5000, type=int)
+mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240, type=int)
 mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="fastapi")
 mcp_transport = config.get_value("AZURE_MCP_SERVER_TRANSPORT", default="sse")
 mcp_host = config.get_value("AZURE_MCP_SERVER_HOST", default="local")
-mcp_enable_auth = bool(config.get_value("AZURE_MCP_SERVER_ENABLE_AUTH", default=True))
-json_response = bool(config.get_value("AZURE_MCP_SERVER_JSON", default=True))
+mcp_enable_auth = config.get_value("AZURE_MCP_SERVER_ENABLE_AUTH", default=True, type=bool)
+json_response = config.get_value("AZURE_MCP_SERVER_JSON", default=True, type=bool)
 
 #OPEN AI SETTTINGS
 deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
 api_version = config.get_value("AZURE_OPENAI_API_VERSION")
 endpoint = config.get_value("AZURE_OPENAI_ENDPOINT")
 
-use_code_interpreter = bool(config.get_value("USE_CODE_INTERPRETER", default=False))
+use_code_interpreter = config.get_value("USE_CODE_INTERPRETER", default=False, type=bool)
 pool_management_endpoint = config.get_value("POOL_MANAGEMENT_ENDPOINT", default="https://dynamicsessions.io")
 
 kernel = Kernel()
@@ -131,6 +131,7 @@ kernel.add_service(AzureChatCompletion(service_id="default", deployment_name=dep
 cosmos = CosmosDBClient(config=config)
 
 def load_tools_from_json(tool_config):
+    loaded_tools = []
     agents_to_load = tool_config.get("agents", [])
     tools_to_load = tool_config.get('tools', [])
 
@@ -152,13 +153,18 @@ def load_tools_from_json(tool_config):
                 kernel.add_plugin(tool_instance.plug_in, tool["name"])
             else:
                 kernel.add_plugin(tool_instance, tool["name"])
+
+            loaded_tools.append(tool_instance)
             
             logging.info(f"Loaded tool: {tool['name']}")
         except Exception as e:
             logging.error(f"Failed to load tool {tool['name']}: {e}")
             continue
 
+    return loaded_tools
+
 def load_tools_from_cosmos(container_name, document_id):
+    loaded_tools = []
     logging.info(f"Loading tools from cosmos {container_name} : {document_id}")
     try:
         tool_config = cosmos.get_document(container_name, document_id)
@@ -167,12 +173,15 @@ def load_tools_from_cosmos(container_name, document_id):
             logging.error(f"Tool configuration document {document_id} not found in container {container_name}.")
             return
 
-        load_tools_from_json(tool_config)
+        loaded_tools.extend(load_tools_from_json(tool_config))
 
     except Exception as e:
         logging.error(f"Error loading tools from Cosmos DB: {e}")
 
+    return loaded_tools
+
 def load_tools_from_file(file_name):
+    loaded_tools = []
     logging.info(f"Loading tools from {file_name}")
     #load the tool_config.json
     tool_config = os.path.join(os.path.dirname(__file__), file_name)
@@ -180,10 +189,13 @@ def load_tools_from_file(file_name):
         with open(tool_config, "r") as f:
             tool_config = json.load(f)
 
-        load_tools_from_json(tool_config)
+        loaded_tools.extend(load_tools_from_json(tool_config))
 
-load_tools_from_cosmos("mcp", "tool_config")
-load_tools_from_cosmos("mcp", "tool_config_custom")
+    return loaded_tools
+
+loaded_tools = []
+loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config"))
+loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config_custom"))
 
 if (use_code_interpreter):
     logging.info("Loading Code Interpreter")
@@ -305,6 +317,18 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     app.add_route("/sse", route=handle_sse, methods=["GET", "POST"])
     #app.include_router(message_router)
     app.add_route("/messages", route=handle_post_message, methods=["POST"])
+
+    for tool in loaded_tools:
+        if hasattr(tool, "has_oauth_endpoint") and tool.has_oauth_endpoint:
+            app.add_route(
+                tool.oauth_token_endpoint,
+                tool.handle_oauth_token,
+                methods=["GET", "POST"])
+            
+            app.add_route(
+                tool.oauth_authorize_endpoint,
+                tool.handle_oauth_authorize,
+                methods=["GET", "POST"])
 
     @app.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request, exc):
