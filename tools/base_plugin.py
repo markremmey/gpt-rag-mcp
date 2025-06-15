@@ -46,12 +46,14 @@ ArgsSchema = Union[TypeBaseModel, dict[str, Any]]
 
 class BasePlugin():
 
+    settings : Dict = {}
     config : Configuration = None
 
     def __init__(self, settings : Dict= {}):
 
         logging.info(f"Creating ${__name__}")
 
+        self.settings = settings
         self.config = settings["config"]
 
         if self.config is None:

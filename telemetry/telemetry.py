@@ -1,3 +1,4 @@
+import os
 import logging
 import platform
 
@@ -25,6 +26,36 @@ class Telemetry:
     langchain_log_level : int = logging.NOTSET
     api_name : str = None
     telemetry_connection_string : str = None
+
+    @staticmethod
+    def configure_basic(config: Configuration):
+        level=config.get_value('LOGLEVEL', 'DEBUG').upper()
+
+        #convert to logging level
+        if level == 'DEBUG':    
+            level = logging.DEBUG
+        elif level == 'INFO':
+            level = logging.INFO
+        elif level == 'WARNING':
+            level = logging.WARNING
+        elif level == 'ERROR':
+            level = logging.ERROR
+        elif level == 'CRITICAL':
+            level = logging.CRITICAL
+
+        logging.basicConfig(level=level, force=True)
+        logging.getLogger("azure").setLevel(config.get_value('AZURE_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("httpx").setLevel(config.get_value('HTTPX_LOGLEVEL', 'ERROR').upper())
+        #logging.getLogger("httpcore").setLevel(config.get_value('HTTPCORE_LOGLEVEL', 'ERROR').upper())
+        #logging.getLogger("openai._base_client").setLevel(config.get_value('OPENAI_BASE_CLIENT_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("urllib3").setLevel(config.get_value('URLLIB3_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("urllib3.connectionpool").setLevel(config.get_value('URLLIB3_CONNECTIONPOOL_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("openai").setLevel(config.get_value('OPENAI_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("autogen_core").setLevel(config.get_value('AUTOGEN_CORE_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("autogen_core.events").setLevel(config.get_value('AUTOGEN_EVENTS_LOGLEVEL', 'WARNING').upper())
+        #logging.getLogger("uvicorn.error").propagate = True
+        #logging.getLogger("uvicorn.access").propagate = True
+
 
     @staticmethod
     def configure_monitoring(config: Configuration, telemetry_connection_string: str, api_name : str):

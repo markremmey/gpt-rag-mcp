@@ -19,7 +19,7 @@ def get_config(action: str = None) -> Configuration:
     return __config
 
 def validate_api_key_header(x_api_key: str = Depends(APIKeyHeader(name='X-API-Key'))):
-    result = x_api_key == get_config().get_value(f'MCP:APIKey')
+    result = x_api_key == get_config().get_value(f'AZURE_MCP_SERVER_APIKEY')
     
     if not result:
         logging.error('Invalid API key. You must provide a valid API key in the X-API-KEY header.')

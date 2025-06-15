@@ -13,6 +13,7 @@ from connectors import CosmosDBClient
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
 from datetime import datetime
+from telemetry import Telemetry
 
 from fastapi import FastAPI, Depends, APIRouter
 #from fastapi_mcp import FastApiMCP
@@ -20,6 +21,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import PlainTextResponse
 
 from typing import Optional
+
+from util.tools import is_azure_environment
 
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
@@ -98,39 +101,8 @@ def auth_callback_factory(scope):
 
 config = get_config()
 
-level=config.get_value('LOGLEVEL', 'DEBUG').upper()
-
-#convert to logging level
-if level == 'DEBUG':    
-    level = logging.DEBUG
-elif level == 'INFO':
-    level = logging.INFO
-elif level == 'WARNING':
-    level = logging.WARNING
-elif level == 'ERROR':
-    level = logging.ERROR
-elif level == 'CRITICAL':
-    level = logging.CRITICAL
-
-# Add console to logging
-logging.basicConfig(level=level, force=True)
-
-level=config.get_value('LOGLEVEL', 'DEBUG').upper()
-
-#convert to logging level
-if level == 'DEBUG':    
-    level = logging.DEBUG
-elif level == 'INFO':
-    level = logging.INFO
-elif level == 'WARNING':
-    level = logging.WARNING
-elif level == 'ERROR':
-    level = logging.ERROR
-elif level == 'CRITICAL':
-    level = logging.CRITICAL
-
-# Add console to logging
-logging.basicConfig(level=level, force=True)
+#configure basic logging
+Telemetry.configure_basic(config)
 
 #MCP Settings
 mcp_port = int(config.get_value("AZURE_MCP_SERVER_PORT", default=5000))
@@ -138,7 +110,8 @@ mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240)
 mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="fastapi")
 mcp_transport = config.get_value("AZURE_MCP_SERVER_TRANSPORT", default="sse")
 mcp_host = config.get_value("AZURE_MCP_SERVER_HOST", default="local")
-json_response = config.get_value("AZURE_MCP_SERVER_JSON", default=True)
+mcp_enable_auth = bool(config.get_value("AZURE_MCP_SERVER_ENABLE_AUTH", default=True))
+json_response = bool(config.get_value("AZURE_MCP_SERVER_JSON", default=True))
 
 #OPEN AI SETTTINGS
 deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
@@ -225,10 +198,6 @@ if (use_code_interpreter):
 
 server = kernel.as_mcp_server(server_name="sk")
 
-#mcp_mode = "fastapi"
-#mcp_transport = "sse" # "stateless" or "sse" or "stdio"
-#mcp_host = "local"
-
 fastapi_request_var: ContextVar[Optional[Request]] = ContextVar('fastapi_request', default=None)
 
 logging.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
@@ -298,8 +267,9 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
         set_fastapi_request(request.scope)
 
         #check the api-key header
-        #if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
-        #    return PlainTextResponse("Unauthorized", status_code=401)
+        if mcp_enable_auth == True:
+            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+                return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
             return await sse.handle_post_message(request)
@@ -312,8 +282,9 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
         set_fastapi_request(request)
 
         #check the api-key header
-        #if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
-        #    return PlainTextResponse("Unauthorized", status_code=401)
+        if mcp_enable_auth == True:
+            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+                return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
             async with sse.connect_sse(
@@ -369,8 +340,9 @@ elif (mcp_mode == "sse"):
         set_fastapi_request(request)
 
         #check the api-key header
-        if not request.headers.get("X-API-Key") == config.get_value("MCP:APIKey"):
-            return PlainTextResponse("Unauthorized", status_code=401)
+        if mcp_enable_auth == True:
+            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+                return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
             async with sse.connect_sse(
@@ -422,7 +394,7 @@ elif (mcp_mode == "sse"):
     app = Starlette(debug=True,routes=routes) #, exception_handlers=exception_handlers, middleware=middleware)   
     app.add_middleware(AuthenticationMiddleware)
 
-if (mcp_host == "local"):
+if (not is_azure_environment()):
     # Run the app locally
     #asyncio.run(uvicorn.run(app, host="0.0.0.0", port=mcp_port, log_level="debug", timeout_keep_alive=60))
     uvicorn.run(app, host="0.0.0.0", port=mcp_port, log_level="debug", timeout_keep_alive=60)
