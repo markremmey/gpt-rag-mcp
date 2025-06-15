@@ -39,6 +39,10 @@ class MicrosoftTeamsPlugin(MicrosoftGraphPlugin):
 
         _get_user_context = self._get_user_context()
 
+        #use the access token from the user context if available
+        if _get_user_context:
+            self.access_token = _get_user_context.get("access_token", None)
+
         url =  f"https://graph.microsoft.com/v1.0/teams/{team_id}/channels/{channel_id}/messages"
 
         message = {
@@ -65,6 +69,10 @@ class MicrosoftTeamsPlugin(MicrosoftGraphPlugin):
         """
 
         _get_user_context = self._get_user_context()
+
+        #use the access token from the user context if available
+        if _get_user_context:
+            self.access_token = _get_user_context.get("access_token", None)
 
         if not team_id:
             team_id = self.team_id
@@ -98,6 +106,10 @@ class MicrosoftTeamsPlugin(MicrosoftGraphPlugin):
         """
 
         _get_user_context = self._get_user_context()
+
+        #use the access token from the user context if available
+        if _get_user_context:
+            self.access_token = _get_user_context.get("access_token", None)
 
         url =  f"https://graph.microsoft.com/v1.0/chats/{chat_id}/messages"
 

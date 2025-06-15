@@ -12,6 +12,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt, RetryEr
 class Configuration:
 
     credential = None
+    aiocredential = None
 
     def __init__(self):
 

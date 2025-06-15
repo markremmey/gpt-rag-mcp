@@ -17,9 +17,13 @@ class Neo4jPlugin(GraphRagPlugin):
 
         self.aoai : AzureOpenAIConnector = AzureOpenAIConnector(self.config)
 
-        self.uri = "neo4j://localhost:7687"
-        self.auth = ("neo4j", "password")
-        self.index_name = "vector-index-name"
+        self.uri = self.settings.get("neo4j_uri", "neo4j://localhost:7687")
+        self.auth = (self.settings.get("neo4j_user", "neo4j"), self.settings.get("neo4j_password", "password"))
+        self.index_name = self.settings.get("neo4j_index_name", "vector-index-name")
+        self.label = self.settings.get("neo4j_label", "Document")
+        self.embedding_model = self.settings.get("neo4j_embedding_model", "text-embedding-3-large")
+        self.embedding_property = self.settings.get("neo4j_embedding_property", "vectorProperty")
+        self.similarity_fn = self.settings.get("neo4j_similarity_fn", "euclidean")
 
         # Connect to Neo4j database
         self.driver = GraphDatabase.driver(self.uri, auth=self.auth)
@@ -28,10 +32,10 @@ class Neo4jPlugin(GraphRagPlugin):
         create_vector_index(
             self.driver,
             self.index_name,
-            label="Document",
-            embedding_property="vectorProperty",
+            label=self.label,
+            embedding_property=self.embedding_property,
             dimensions=1536,
-            similarity_fn="euclidean",
+            similarity_fn=self.similarity_fn,
         )
 
     @kernel_function(
@@ -47,7 +51,7 @@ class Neo4jPlugin(GraphRagPlugin):
         _get_user_context = self._get_user_context()
 
         # Create Embedder object
-        embedder = OpenAIEmbeddings(model="text-embedding-3-large")
+        embedder = OpenAIEmbeddings(model=self.embedding_model)
 
         # Initialize the retriever
         retriever = VectorRetriever(self.driver, self.index_name, embedder)
