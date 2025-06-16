@@ -1,6 +1,7 @@
 import pydantic
 import inspect
 import copy
+import logging
 
 from typing import (
     TYPE_CHECKING,
@@ -15,7 +16,7 @@ from typing import (
     cast,
     get_args,
     get_origin,
-    get_type_hints,
+    get_type_hints,    
 )
 from abc import ABC, abstractmethod
 from pydantic import (
@@ -28,6 +29,8 @@ from pydantic import (
     model_validator,
     validate_arguments,
 )
+from contextvars import ContextVar
+from starlette.requests import Request
 from functools import wraps
 from semantic_kernel.functions import kernel_function
 from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
@@ -35,15 +38,31 @@ from semantic_kernel.connectors.ai.open_ai import AzureChatCompletion
 from azure.identity import get_bearer_token_provider
 from configuration import Configuration
 
+from middleware.authentication_middleware import get_request
+
 TypeBaseModel = Union[type[BaseModel], type[pydantic.BaseModel]]
 
 ArgsSchema = Union[TypeBaseModel, dict[str, Any]]
 
 class BasePlugin():
 
+    settings : Dict = {}
     config : Configuration = None
 
+    has_oauth_endpoint: bool = False
+    oauth_endpoint : str = None
+
+    def handle_oauth_token(scope, send, receive):
+        raise NotImplementedError("OAuth handling is not implemented for this plugin.")
+
+    def handle_oauth_authorize(scope, send, receive):
+        raise NotImplementedError("OAuth handling is not implemented for this plugin.")
+
     def __init__(self, settings : Dict= {}):
+
+        logging.info(f"Creating ${__name__}")
+
+        self.settings = settings
         self.config = settings["config"]
 
         if self.config is None:
@@ -79,6 +98,20 @@ class BasePlugin():
     args_schema: Annotated[Optional[ArgsSchema], SkipValidation()] = Field(
         default=None, description="The tool schema."
     )
+
+    def _get_user_context(self) -> str:
+        """
+        Get the user context for the plugin.
+
+        This method is a placeholder and should be overridden in subclasses
+        to provide the actual user context.
+        """
+        self.request = get_request()
+
+        if self.request is not None:
+            user_context = self.request.get("user_context", None)
+            if user_context is not None:
+                return user_context
 
     def _get_model_client(self, response_format=None):
         """

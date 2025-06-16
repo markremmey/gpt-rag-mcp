@@ -12,6 +12,7 @@ from tenacity import retry, wait_random_exponential, stop_after_attempt, RetryEr
 class Configuration:
 
     credential = None
+    aiocredential = None
 
     def __init__(self):
 
@@ -19,9 +20,9 @@ class Configuration:
             self.tenant_id = os.environ.get('AZURE_TENANT_ID', "*")
         except Exception as e:
             raise e
-
+        
         try:
-            self.client_id = os.environ.get('AZURE_CLIENT_ID', None)
+            self.client_id = os.environ.get('AZURE_CLIENT_ID', "*")
         except Exception as e:
             raise e
         
@@ -49,8 +50,8 @@ class Configuration:
 
     # Connect to Azure App Configuration.
 
-    def get_value(self, key: str, default: str = None) -> str:
-        
+    def get_value(self, key: str, default: str = None, allow_none: bool = False, type: type = str) -> str:
+
         if key is None:
             raise Exception('The key parameter is required for get_value().')
 
@@ -72,9 +73,18 @@ class Configuration:
                 pass
 
         if value is not None:
+            if type is not None:
+                if type is bool:
+                    if isinstance(value, str):
+                        value = value.lower() in ['true', '1', 'yes']
+                else:
+                    try:
+                        value = type(value)
+                    except ValueError as e:
+                        raise Exception(f'Value for {key} could not be converted to {type.__name__}. Error: {e}')
             return value
         else:
-            if default is not None:
+            if default is not None or allow_none is True:
                 return default
             
             raise Exception(f'The configuration variable {key} not found.')

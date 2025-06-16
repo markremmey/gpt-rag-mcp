@@ -82,7 +82,7 @@ class FastApiSseServerTransport:
                     await sse_stream_writer.send(
                         {
                             "event": "message",
-                            "data": message.model_dump_json(
+                            "data": message.message.model_dump_json(
                                 by_alias=True, exclude_none=True
                             ),
                         }
@@ -100,20 +100,20 @@ class FastApiSseServerTransport:
 
     async def handle_post_message(
         self, request : fastapi.Request
-    ) -> None:
+    ) -> fastapi.Response:
         return await self.handle_post_message_core(request.scope, request._receive, request._send)
 
     async def handle_post_message_core(
         self, scope: Scope, receive: Receive, send: Send
-    ) -> None:
+    ) -> fastapi.Response:
         logger.debug("Handling POST message")
-        request = Request(scope, receive)
+        request = Request(scope, receive, send)
 
         session_id_param = request.query_params.get("session_id")
         if session_id_param is None:
             logger.warning("Received request without session_id")
             response = Response("session_id is required", status_code=400)
-            return await response(scope, receive, send)
+            return response
 
         try:
             session_id = UUID(hex=session_id_param)
@@ -121,28 +121,30 @@ class FastApiSseServerTransport:
         except ValueError:
             logger.warning(f"Received invalid session ID: {session_id_param}")
             response = Response("Invalid session ID", status_code=400)
-            return await response(scope, receive, send)
+            return response
 
         writer = self._read_stream_writers.get(session_id)
         if not writer:
             logger.warning(f"Could not find session for ID: {session_id}")
             response = Response("Could not find session", status_code=404)
-            return await response(scope, receive, send)
+            return response
 
         body = await request.body()
         logger.debug(f"Received JSON: {body}")
+
+        # if body == b"":
+        #     body = b'{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":"2025-03-26","capabilities":{"sampling":{},"roots":{"listChanged":true}},"clientInfo":{"name":"mcp-inspector","version":"0.13.0"}}}'
 
         try:
             message = types.JSONRPCMessage.model_validate_json(body)
             logger.debug(f"Validated client message: {message}")
         except ValidationError as err:
             logger.error(f"Failed to parse message: {err}")
-            response = Response("Could not parse message", status_code=400)
-            await response(scope, receive, send)
+            response = Response(f"Could not parse message: {err}", status_code=400)
             await writer.send(err)
-            return
+            return response
 
         logger.debug(f"Sending message to writer: {message}")
-        response = Response("Accepted", status_code=202)
-        await response(scope, receive, send)
+        response = Response('Accepted', status_code=202)
         await writer.send(message)
+        return response

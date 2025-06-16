@@ -2,7 +2,7 @@
 
 Welcome to the GPT-RAG Model Context Protocol (MCP) Server for the GPT-RAG series of repos. Note these currently point at the `givenscj` fork due to some reorganizing of the repos. The original repos are available in the `azure` organization, but will not currenlty work with the MCP server.
 
-- [GPT-RAG](https://github.com/givenscj/gpt-rag)
+- [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration branch]
 - [GPT-RAG-AGENTIC](https://github.com/givenscj/gpt-rag-agentic)
 - [GPT-RAG-ORCHESTATOR](https://github.com/givenscj/gpt-rag-orchestrator)
 - [GPT-RAG-FRONTEND](https://github.com/givenscj/gpt-rag-frontend)
@@ -46,6 +46,20 @@ We have started with a common set of tools that we use for the [GPT-RAG-AGENITC]
 - Samples
   - [Custom Tool](/docs/samples/custom_tool.md)
   - [Function Triggers](/docs/samples/function_trigger.md)
+
+## Architecture
+
+Zero Trust (ZTA)
+
+![Zero Trust Architecture](media/architecture-zta.png "Zero Trust Architecture")
+
+Model Context Protocol (MCP) Server
+
+![Model Context Protocol (MCP) Server](media/mcp-server.png "Model Context Protocol (MCP) Server")
+
+Model Context Protocol (MCP) Flow
+
+![Model Context Protocol (MCP) Flow](media/mcp-flow.png "Model Context Protocol (MCP) Flow")
 
 ## Testing
 

@@ -1,5 +1,5 @@
-mcp[cli]
-semantic-kernel
+#mcp[cli]==1.8.1  #manually copied into app package (with modifications)
+semantic-kernel==1.31.0
 
 azure-keyvault-secrets
 azure-cosmos
@@ -9,12 +9,17 @@ azure-mgmt-storage
 azure-storage-blob
 azure.appconfiguration
 azure.appconfiguration.provider
+azure-monitor-opentelemetry==1.6.10
+azure-monitor-opentelemetry-exporter==1.0.0b37
+azure-cognitiveservices-speech
 
 tenacity
 uv
 
 fastapi
-fastapi-mcp
+#fastapi-mcp==0.3.4
+sse_starlette
+httpx_sse
 
 gunicorn
 uvicorn
@@ -28,6 +33,19 @@ tiktoken
 sqlparse
 pyodbc
 
+#excel
+openpyxl
+
+#word
+python-docx
+
+#databricks
+pyspark==3.4.4
+#databricks-sdk
+#databricks-connect==12.2.45
+#databricks-sql-connector
+pandas
+
 #code interpreter
 azure-ai-projects
 
@@ -36,3 +54,7 @@ wikipedia
 
 ##Bing
 azure-cognitiveservices-search-websearch
+
+#neo4j
+neo4j-graphrag
+neo4j-graphrag[openai]

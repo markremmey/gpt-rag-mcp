@@ -26,5 +26,7 @@ class WikipediaPlugin(BasePlugin):
         Search Wikipedia for a given query.
         """
 
+        _get_user_context = self._get_user_context()
+
         items = wikipedia.search(query, results=self.results)
         return wikipedia.summary(query)
