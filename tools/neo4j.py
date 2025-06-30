@@ -6,7 +6,7 @@ from neo4j_graphrag.retrievers import VectorRetriever
 from typing import Dict
 from semantic_kernel.functions import kernel_function
 from configuration import Configuration
-from graphrag import GraphRagPlugin
+from tools.graphrag.graphrag import GraphRagPlugin
 
 from connectors import AzureOpenAIConnector
 

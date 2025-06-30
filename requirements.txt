@@ -9,8 +9,8 @@ azure-mgmt-storage
 azure-storage-blob
 azure.appconfiguration
 azure.appconfiguration.provider
-azure-monitor-opentelemetry==1.6.10
-azure-monitor-opentelemetry-exporter==1.0.0b37
+azure-monitor-opentelemetry
+azure-monitor-opentelemetry-exporter
 azure-cognitiveservices-speech
 
 tenacity
@@ -31,7 +31,10 @@ autogen-agentchat==0.5.7
 autogen_ext==0.5.7
 tiktoken
 sqlparse
-pyodbc
+azure-servicebus
+azure-eventgrid
+#git+https://github.com/givenscj/graphrag.git#egg=graphrag
+#graphrag
 
 #excel
 openpyxl
@@ -49,8 +52,16 @@ pandas
 #code interpreter
 azure-ai-projects
 
+#presidio
+presidio_analyzer 
+presidio_anonymizer
+
 ##wikipedia
 wikipedia
+
+#postgresql
+psycopg[binary]
+pyodbc
 
 ##Bing
 azure-cognitiveservices-search-websearch

@@ -2,6 +2,7 @@ import pydantic
 import inspect
 import copy
 import logging
+import json
 
 from typing import (
     TYPE_CHECKING,
@@ -68,10 +69,13 @@ class BasePlugin():
         if self.config is None:
             self.config = Configuration()
 
-        self.aoai_resource = self.config.get_value('AZURE_OPENAI_RESOURCE', 'openai')
-        self.chat_deployment = self.config.get_value('AZURE_OPENAI_CHATGPT_DEPLOYMENT', 'chat')
-        self.model = self.config.get_value('AZURE_OPENAI_CHATGPT_MODEL', 'gpt-4o')
-        self.api_version = self.config.get_value('AZURE_OPENAI_API_VERSION', '2024-10-21')
+        self.model = self._get_model(model_name=settings.get("model_name", "CHAT_DEPLOYMENT_NAME"))
+
+        self.aoai_resource = self.model.get("name", "openai")
+        self.chat_deployment = self.model.get("chat_deployment", "chat")
+        self.model_name = self.model.get("model", "gpt-4o")
+        self.api_version = self.model.get("api_version", "2024-10-21")
+
         self.max_tokens = int(self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 1000))
         self.temperature = float(self.config.get_value('AZURE_OPENAI_TEMPERATURE', 0.7))
 
@@ -99,7 +103,26 @@ class BasePlugin():
         default=None, description="The tool schema."
     )
 
-    def _get_user_context(self) -> str:
+    def _get_model(self, model_name: str = 'CHAT_DEPLOYMENT_NAME') -> Dict:
+        model_deployments = self.config.get_value("MODEL_DEPLOYMENTS", default='[]').replace("'", "\"")
+
+        try:
+            print(f"Model deployments: {model_deployments}")
+            logging.info(f"Model deployments: {model_deployments}")
+
+            json_model_deployments = json.loads(model_deployments)
+
+            #get the canonical_name of 'CHAT_DEPLOYMENT_NAME'
+            for deployment in json_model_deployments:
+                if deployment.get("canonical_name") == model_name:
+                    return deployment
+        except json.JSONDecodeError as e:
+            logging.error(f"Error decoding JSON for model deployments: {e}")
+            raise ValueError(f"Invalid model deployments configuration: {model_deployments}")
+            
+        return None
+
+    def _get_user_context(self) -> Dict:
         """
         Get the user context for the plugin.
 
@@ -109,9 +132,12 @@ class BasePlugin():
         self.request = get_request()
 
         if self.request is not None:
-            user_context = self.request.get("user_context", None)
+            user_context = self.request.headers.get("user-context", None)
             if user_context is not None:
-                return user_context
+                return json.loads(user_context)
+        else:
+            logging.warning("Request context is not available. Returning empty user context.")
+            return {}
 
     def _get_model_client(self, response_format=None):
         """
@@ -126,7 +152,7 @@ class BasePlugin():
         )
         return AzureChatCompletion(
             deployment_name=self.chat_deployment,
-            #model=self.model,
+            #model=self.model_name,
             endpoint=f"https://{self.aoai_resource}.openai.azure.com",
             ad_token_provider=token_provider,
             #api_version=self.api_version,

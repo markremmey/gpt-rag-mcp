@@ -18,8 +18,8 @@ class CosmosDBClient:
         self.config = config or Configuration()
         
         # Get Azure Cosmos DB configuration
-        self.db_id = self.config.get_value("AZURE_DB_ID")
-        self.db_name = self.config.get_value("AZURE_DB_NAME")
+        self.db_id = self.config.get_value("DATABASE_ACCOUNT_NAME")
+        self.db_name = self.config.get_value("DATABASE_NAME")
         self.db_uri = f"https://{self.db_id}.documents.azure.com:443/"
 
         from azure.cosmos import CosmosClient
@@ -40,7 +40,7 @@ class CosmosDBClient:
         Lists all documents from the given container.
         """
         
-        container = db.get_container_client(container_name)
+        container = self.db.get_container_client(container_name)
 
         # Correct usage without the outdated argument
         query = "SELECT * FROM c"
@@ -103,8 +103,8 @@ class AsyncCosmosDBClient:
         self.config = config or Configuration()
 
         # Get Azure Cosmos DB configuration
-        self.db_id = self.config.get_value("AZURE_DB_ID")
-        self.db_name = self.config.get_value("AZURE_DB_NAME")
+        self.db_id = self.config.get_value("DATABASE_ACCOUNT_NAME")
+        self.db_name = self.config.get_value("DATABASE_NAME")
         self.db_uri = f"https://{self.db_id}.documents.azure.com:443/"
         
         from azure.cosmos.aio import CosmosClient

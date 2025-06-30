@@ -4,7 +4,8 @@ from azure.identity import DefaultAzureCredential, ChainedTokenCredential, Manag
 from azure.identity.aio import DefaultAzureCredential as AsyncDefaultAzureCredential, ChainedTokenCredential as AsyncChainedTokenCredential, ManagedIdentityCredential as AsyncManagedIdentityCredential, AzureCliCredential as AsyncAzureCliCredential
 from azure.appconfiguration.provider import (
     AzureAppConfigurationKeyVaultOptions,
-    load
+    load,
+    SettingSelector
 )
 
 from tenacity import retry, wait_random_exponential, stop_after_attempt, RetryError
@@ -13,6 +14,7 @@ class Configuration:
 
     credential = None
     aiocredential = None
+
 
     def __init__(self):
 
@@ -35,10 +37,17 @@ class Configuration:
                 AsyncManagedIdentityCredential(client_id=self.client_id),
                 AsyncAzureCliCredential()
             )
+        
+        no_label_selector = SettingSelector(label_filter=None, key_filter='*')
+        label_selector = SettingSelector(label_filter='gpt-rag', key_filter='*')
+        
+        try:
+            app_config_uri = os.environ['APP_CONFIGURATION_URI'] #backward compatibility
+        except Exception as e:
+            app_config_uri = os.environ['APP_CONFIG_ENDPOINT']
 
         try:
-            app_config_uri = os.environ['APP_CONFIGURATION_URI']
-            self.config = load(endpoint=app_config_uri, credential=self.credential,key_vault_options=AzureAppConfigurationKeyVaultOptions(credential=self.credential))
+            self.config = load(selects=[no_label_selector, label_selector],endpoint=app_config_uri, credential=self.credential,key_vault_options=AzureAppConfigurationKeyVaultOptions(credential=self.credential))
         except Exception as e:
             logging.log("error", f"Unable to connect to Azure App Configuration. Please check APP_CONFIGURATION_URI setting. {e}")
             try:

@@ -15,6 +15,9 @@ def get_request_id() -> str:
 def get_request() -> str:
     return _request_ctx_var.get()
 
+def set_request(request) -> None:
+    _request_ctx_var.set(request)
+
 class AuthenticationMiddleware:
     def __init__(
         self,
