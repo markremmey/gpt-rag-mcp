@@ -6,7 +6,8 @@
       "type": "blobTrigger",
       "direction": "in",
       "dataType": "binary",
-      "path" : "bronze/{blobname}.{blobextension}"
+      "path" : "bronze/{blobname}.{blobextension}",
+      "connection": "BronzeStorage"
     }
   ]
 }
