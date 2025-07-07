@@ -8,3 +8,4 @@ def is_azure_environment():
     """Check if the function app is running on the cloud"""
     return (AZURE_CONTAINER_NAME in os.environ
             or AZURE_WEBSITE_INSTANCE_ID in os.environ)
+
