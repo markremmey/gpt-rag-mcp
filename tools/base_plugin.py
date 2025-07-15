@@ -72,7 +72,7 @@ class BasePlugin():
         self.chat_deployment = self.config.get_value('AZURE_OPENAI_CHATGPT_DEPLOYMENT', 'chat')
         self.model = self.config.get_value('AZURE_OPENAI_CHATGPT_MODEL', 'gpt-4o')
         self.api_version = self.config.get_value('AZURE_OPENAI_API_VERSION', '2024-10-21')
-        self.max_tokens = int(self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 1000))
+        self.max_tokens = int(self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 10000))
         self.temperature = float(self.config.get_value('AZURE_OPENAI_TEMPERATURE', 0.7))
 
         # Autogen agent configuration (base to be overridden)

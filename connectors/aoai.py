@@ -36,7 +36,7 @@ class AzureOpenAIConnector:
         self.frequency_penalty = self.settings.get("frequency_penalty", self.config.get_value('AZURE_OPENAI_FREQUENCY_PENALTY', 0.0))
         self.presence_penalty = self.settings.get("presence_penalty", self.config.get_value('AZURE_OPENAI_PRESENCE_PENALTY', 0.0))
         self.stop = self.settings.get("stop", self.config.get_value('AZURE_OPENAI_STOP', None, allow_none=True))
-        self.max_completion_tokens = self.settings.get("max_completion_tokens", self.config.get_value('AZURE_OPENAI_MAX_COMPLETION_TOKENS', 1024))
+        self.max_completion_tokens = self.settings.get("max_completion_tokens", self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 10000))
         self.stream = self.settings.get("stream", self.config.get_value('AZURE_OPENAI_STREAM', False))
 
         token_provider = get_bearer_token_provider(
@@ -107,9 +107,7 @@ class AzureOpenAIConnector:
                 settings=settings
             )
 
-            completion = response.choices[0].message.content
-
-            return completion
+            return response
 
         except RateLimitError as e:
             retry_after_ms = e.response.headers.get('retry-after-ms')
@@ -117,7 +115,7 @@ class AzureOpenAIConnector:
                 retry_after_ms = int(retry_after_ms)
                 logging.info(f"[aoai] get_completion: Reached rate limit, retrying after {retry_after_ms} ms")
                 time.sleep(retry_after_ms / 1000)
-                return self.get_completion(self, prompt, retry_after=False)
+                return self.get_completion(self, prompt, retry_after=False, max_tokens=self.max_completion_tokens)
             else:
                 logging.error(f"[aoai] get_completion: Rate limit error occurred, no 'retry-after-ms' provided: {e}")
                 raise
@@ -135,7 +133,7 @@ class AzureOpenAIConnector:
         num_tokens = GptTokenEstimator().estimate_tokens(text)
         if (num_tokens > MAX_EMBEDDINGS_MODEL_INPUT_TOKENS):
             prompt = f"Rewrite the text to be coherent and meaningful, reducing it to {MAX_EMBEDDINGS_MODEL_INPUT_TOKENS} tokens: {text}"
-            text = self.get_completion(prompt)
+            text = self.get_completion(prompt, max_tokens=self.max_completion_tokens)
             logging.info(f"[aoai] get_embeddings: rewriting text to fit in {MAX_EMBEDDINGS_MODEL_INPUT_TOKENS} tokens")
 
         try:
@@ -152,7 +150,7 @@ class AzureOpenAIConnector:
                 retry_after_ms = int(retry_after_ms)
                 logging.info(f"[aoai ]get_completion: Reached rate limit, retrying after {retry_after_ms} ms")
                 time.sleep(retry_after_ms / 1000)
-                return self.get_completion(self, prompt, retry_after=False)
+                return self.get_completion(self, prompt, retry_after=False, max_tokens=self.max_completion_tokens)
             else:
                 logging.error(f"[aoai] get_completion: Rate limit error occurred, no 'retry-after-ms' provided: {e}")
                 raise
