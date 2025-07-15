@@ -3,6 +3,10 @@
 name: azure-gpt-mcp
 metadata:
   template: azure-gpt-rag-mcp
+infra:
+  provider: bicep
+  path: infra
+  module: main
 services:
   mcpServer:
     project: .
@@ -11,11 +15,17 @@ services:
 # infrastructure is pulled from the main azure-gpt-rag repo with a hook.
 # If you previously provisioned infrastructure, use the same azd-env name, subscription and location to deploy data ingest to that infrastructure.        
 hooks:
-  preprovision:
+  predeploy:
     posix:
-      run: scripts/preprovision.sh
+      run: scripts/deploy.sh
       interactive: true
     windows:
-      run: scripts/preprovision.ps1
+      run: scripts/deploy.ps1
+      interactive: true  
+  preprovision:
+    posix:
+      run: scripts/preProvision.sh
       interactive: true
-      
+    windows:
+      run: scripts/preProvision.ps1
+      interactive: true

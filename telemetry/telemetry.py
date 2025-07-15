@@ -29,7 +29,7 @@ class Telemetry:
 
     @staticmethod
     def configure_basic(config: Configuration):
-        level=config.get_value('LOGLEVEL', 'DEBUG').upper()
+        level=config.get_value('LOG_LEVEL', 'DEBUG').upper()
 
         #convert to logging level
         if level == 'DEBUG':    
@@ -44,7 +44,7 @@ class Telemetry:
             level = logging.CRITICAL
 
         logging.basicConfig(level=level, force=True)
-        logging.getLogger("azure").setLevel(config.get_value('AZURE_LOGLEVEL', 'WARNING').upper())
+        logging.getLogger("azure").setLevel(config.get_value('AZURE_LOG_LEVEL', 'WARNING').upper())
         #logging.getLogger("httpx").setLevel(config.get_value('HTTPX_LOGLEVEL', 'ERROR').upper())
         #logging.getLogger("httpcore").setLevel(config.get_value('HTTPCORE_LOGLEVEL', 'ERROR').upper())
         #logging.getLogger("openai._base_client").setLevel(config.get_value('OPENAI_BASE_CLIENT_LOGLEVEL', 'WARNING').upper())
@@ -65,7 +65,7 @@ class Telemetry:
         resource = Resource.create(
             {
                 SERVICE_NAME: f"{Telemetry.api_name}",
-                SERVICE_NAMESPACE : f"gpt-rag-mcp",
+                SERVICE_NAMESPACE : api_name,
                 SERVICE_VERSION: f"1.0.0",
                 SERVICE_INSTANCE_ID: f"{platform.node()}"
             })
@@ -119,12 +119,12 @@ class Telemetry:
     def configure_logging(config: Configuration):
 
         Telemetry.log_level = Telemetry.translate_log_level(
-            config.get_value("Mcp:Logging:LogLevel:Default", default= "Information"))
+            config.get_value("LOG_LEVEL", default= "Information"))
         
         Telemetry.azure_log_level = Telemetry.translate_log_level(
-            config.get_value("Mcp:Logging:LogLevel:Azure", default= "Information"))
+            config.get_value("LOG_LEVEL", default= "Information"))
 
-        enable_console_logging = config.get_value("FoundationaLLM:PythonSDK:Logging:EnableConsoleLogging")
+        enable_console_logging = config.get_value("ENABLE_CONSOLE_LOGGING", default='true').lower()
 
         handlers = []
 
@@ -173,7 +173,7 @@ class Telemetry:
             },
             'filters': {
                 'exclude_trace_logs': {
-                    '()': 'foundationallm.telemetry.ExcludeTraceLogsFilter',
+                    '()': 'telemetry.ExcludeTraceLogsFilter',
                 },
             },
             'loggers': {

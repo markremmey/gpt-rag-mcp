@@ -9,6 +9,7 @@ import anyio
 import uvicorn
 import fastapi
 
+from constants import APPLICATION_INSIGHTS_CONNECTION_STRING
 from connectors import CosmosDBClient
 from collections.abc import AsyncIterator
 from contextvars import ContextVar
@@ -23,6 +24,7 @@ from fastapi.responses import PlainTextResponse
 from typing import Optional
 
 from util.tools import is_azure_environment
+from constants import APP_NAME
 
 from mcp.server.lowlevel import Server
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
@@ -59,8 +61,9 @@ from middleware.authentication_middleware import AuthenticationMiddleware
 from sse import FastApiSseServerTransport
 
 from event_store import InMemoryEventStore
+from middleware.authentication_middleware import get_request, set_request
 
-from dependencies import API_NAME, get_config, validate_api_key_header
+from dependencies import get_config, validate_api_key_header
 
 class WebsocketServer(WebSocketEndpoint):
     encoding = "bytes"
@@ -101,11 +104,11 @@ def auth_callback_factory(scope):
 
 config = get_config()
 
-#configure basic logging
-Telemetry.configure_basic(config)
+# Create the plugin manager
+Telemetry.configure_monitoring(config, APPLICATION_INSIGHTS_CONNECTION_STRING, APP_NAME)
 
 #MCP Settings
-mcp_port = config.get_value("AZURE_MCP_SERVER_PORT", default=5000, type=int)
+mcp_port = config.get_value("AZURE_MCP_SERVER_PORT", default=80, type=int)    
 mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240, type=int)
 mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="fastapi")
 mcp_transport = config.get_value("AZURE_MCP_SERVER_TRANSPORT", default="sse")
@@ -113,10 +116,28 @@ mcp_host = config.get_value("AZURE_MCP_SERVER_HOST", default="local")
 mcp_enable_auth = config.get_value("AZURE_MCP_SERVER_ENABLE_AUTH", default=True, type=bool)
 json_response = config.get_value("AZURE_MCP_SERVER_JSON", default=True, type=bool)
 
+#get all the model deployments
+model_deployments = config.get_value("MODEL_DEPLOYMENTS", default='[]').replace("'", "\"")
+
+try:
+    json_model_deployments = json.loads(model_deployments) if isinstance(model_deployments, str) else model_deployments
+except Exception as e:
+    logging.error(f"Error decoding JSON for model deployments: {e}")
+    raise ValueError(f"Invalid model deployments configuration: {model_deployments}")
+
+#get the canonical_name of 'CHAT_DEPLOYMENT_NAME'
+for deployment in json_model_deployments:
+    if deployment.get("canonical_name") == "CHAT_DEPLOYMENT_NAME":
+        deployment_name = deployment.get("name")
+        api_version = deployment.get("version")
+        endpoint = deployment.get("endpoint")
+        break
+
 #OPEN AI SETTTINGS
-deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
-api_version = config.get_value("AZURE_OPENAI_API_VERSION")
-endpoint = config.get_value("AZURE_OPENAI_ENDPOINT")
+
+#deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
+#api_version = config.get_value("AZURE_OPENAI_API_VERSION")
+
 
 use_code_interpreter = config.get_value("USE_CODE_INTERPRETER", default=False, type=bool)
 pool_management_endpoint = config.get_value("POOL_MANAGEMENT_ENDPOINT", default="https://dynamicsessions.io")
@@ -210,8 +231,6 @@ if (use_code_interpreter):
 
 server = kernel.as_mcp_server(server_name="sk")
 
-fastapi_request_var: ContextVar[Optional[Request]] = ContextVar('fastapi_request', default=None)
-
 logging.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
 if (mcp_mode == "stdio"):
     # Run as stdio server
@@ -250,7 +269,7 @@ elif (mcp_transport == "stateless"):
 elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     # Add the MCP server to your FastAPI app
     app = FastAPI(
-        title=API_NAME,
+        title=APP_NAME,
         description="MCP Server for GPT RAG",
         version="1.0.0",
         lifespan=lifespan,
@@ -265,8 +284,6 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
 
     FastAPIInstrumentor.instrument_app(app)
 
-    def set_fastapi_request(request: fastapi.Request):
-        fastapi_request_var.set(request)
 
     #https://microsoft.github.io/autogen/stable//reference/python/autogen_ext.tools.mcp.html
     # Create an SSE transport at an endpoint
@@ -276,11 +293,11 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
     @message_router.post('/messages')
     async def handle_post_message(request: fastapi.Request) -> fastapi.Response:
         #set the request context for downstream tools
-        set_fastapi_request(request.scope)
+        set_request(request.scope)
 
         #check the api-key header
         if mcp_enable_auth == True:
-            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+            if not request.headers.get("X-API-Key") == config.get_value("MCP_APP_APIKEY"):
                 return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
@@ -291,11 +308,11 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
 
     async def handle_sse(request : fastapi.Request):
         #set the request context for downstream tools
-        set_fastapi_request(request)
+        set_request(request)
 
         #check the api-key header
         if mcp_enable_auth == True:
-            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+            if not request.headers.get("X-API-Key") == config.get_value("MCP_APP_APIKEY"):
                 return PlainTextResponse("Unauthorized", status_code=401)
 
         try:
@@ -369,7 +386,7 @@ elif (mcp_mode == "sse"):
 
         #check the api-key header
         if mcp_enable_auth == True:
-            if not request.headers.get("X-API-Key") == config.get_value("AZURE_MCP_SERVER_APIKEY"):
+            if not request.headers.get("X-API-Key") == config.get_value("MCP_APP_APIKEY"):
                 return PlainTextResponse("Unauthorized", status_code=401)
 
         try:

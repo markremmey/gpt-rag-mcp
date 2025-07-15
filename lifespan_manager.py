@@ -6,6 +6,8 @@ from starlette.types import ASGIApp, Lifespan
 from typing import AsyncIterator
 from contextlib import asynccontextmanager
 from configuration import Configuration
+from telemetry import Telemetry
+from constants import APPLICATION_INSIGHTS_CONNECTION_STRING, APP_NAME
 
 config: Configuration = None
 http_client_session: ClientSession = None
@@ -21,9 +23,6 @@ async def lifespan(app: Starlette) -> AsyncIterator[None]:
 
     # Create an aiohttp client session
     http_client_session = ClientSession()
-
-    # Create the plugin manager
-    #Telemetry.configure_monitoring(config, f'', 'MCP')
 
     yield
     

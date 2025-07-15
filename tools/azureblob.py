@@ -1,3 +1,5 @@
+import zipfile
+import os
 import inspect
 import copy
 import datetime
@@ -136,6 +138,29 @@ class AzureBlobPlugin(BasePlugin):
             blob_client.upload_blob(data, overwrite=True)
         else:
             raise ValueError("Unsupported data type for upload")
+        
+    #requires a compute environment with writable access to the file system
+    def zip_file(self, file_path: str, zip_file_path: str):
+        """Zip a file to the specified zip file path."""
+        
+        if not os.path.exists(file_path):
+            raise FileNotFoundError(f"The file {file_path} does not exist.")
+        
+        with zipfile.ZipFile(zip_file_path, 'w') as zipf:
+            zipf.write(file_path, os.path.basename(file_path))
+        
+        print(f"Zipped {file_path} to {zip_file_path}")
+
+    #requires a compute environment with writable access to the file system
+    def unzip_file(zip_file_path, extract_to: str = '/temp'):
+        """Unzip a file to the specified directory."""
+        
+        if not os.path.exists(extract_to):
+            os.makedirs(extract_to)
+
+        with zipfile.ZipFile(zip_file_path, 'r') as zip_ref:
+            zip_ref.extractall(extract_to)
+        print(f"Extracted {zip_file_path} to {extract_to}")
 
     def create_sas_token(
         self, container_name: str, blob_name: str, expiry: datetime = None

@@ -9,16 +9,6 @@ import os
 import time
 
 from configuration import Configuration
-config = Configuration()
-
-STORAGE_ACCOUNT_NAME = config.get_value("STORAGE_ACCOUNT_NAME")
-USE_SAS_TOKEN = config.get_value("USE_SAS_TOKEN", "true") == "true"
-HOURS = int(config.get_value("SAS_TOKEN_EXPIRY_HOURS", "1"))
-
-# Create BlobServiceClient using Managed Identity
-blob_service_client = BlobServiceClient(
-    f"https://{STORAGE_ACCOUNT_NAME}.blob.core.windows.net", credential=config.credential
-)
 
 class BlobClient:
     
@@ -33,6 +23,17 @@ class BlobClient:
         self.credential = self._get_credential(credential)
         self.file_url = blob_url
         self.blob_service_client = None
+
+        config = Configuration()
+
+        self.storage_account_name = config.get_value("STORAGE_ACCOUNT_NAME")
+        self.use_sas_token = config.get_value("USE_SAS_TOKEN", "true") == "true"
+        self.hours = int(config.get_value("SAS_TOKEN_EXPIRY_HOURS", "1"))
+
+        # Create BlobServiceClient using Managed Identity
+        self.blob_service_client = BlobServiceClient(
+            f"https://{self.storage_account_name}.blob.core.windows.net", credential=config.credential
+        )
 
         # 2. Parse the blob URL => account_url, container_name, blob_name
         try:
@@ -151,24 +152,24 @@ class BlobContainerClient:
         return credential
 
     def generate_sas_token(self, container_name, blob_name):
-        delegation_key = blob_service_client.get_user_delegation_key(
+        delegation_key = self.blob_service_client.get_user_delegation_key(
             key_start_time=datetime.datetime.utcnow(),
-            key_expiry_time=datetime.datetime.utcnow() + datetime.timedelta(hours=HOURS)
+            key_expiry_time=datetime.datetime.utcnow() + datetime.timedelta(hours=self.hours)
         )
         
         """Generate a SAS token with read & write access for a blob."""
         sas_token = generate_blob_sas(
-            account_name=STORAGE_ACCOUNT_NAME,
+            account_name=self.storage_account_name,
             container_name=container_name,
             blob_name=blob_name,
             user_delegation_key=delegation_key,  # Managed Identity handles authentication
             permission=BlobSasPermissions(read=True, write=True),  # Read & Write
-            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=HOURS)  # 1-hour expiry
+            expiry=datetime.datetime.utcnow() + datetime.timedelta(hours=self.hours)  # 1-hour expiry
         )
 
-        blob_client = blob_service_client.get_blob_client(container_name, blob_name)
+        blob_client = self.blob_service_client.get_blob_client(container_name, blob_name)
 
-        if USE_SAS_TOKEN == "true" or USE_SAS_TOKEN == True:
+        if self.use_sas_token == "true" or self.use_sas_token == True:
             # Generate a SAS URL for the blob
             return f"{blob_client.url}?{sas_token}"
         else:
