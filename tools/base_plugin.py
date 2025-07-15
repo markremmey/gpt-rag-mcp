@@ -76,7 +76,7 @@ class BasePlugin():
         self.model_name = self.model.get("model", "gpt-4o")
         self.api_version = self.model.get("api_version", "2024-10-21")
 
-        self.max_tokens = int(self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 1000))
+        self.max_tokens = int(self.config.get_value('AZURE_OPENAI_MAX_TOKENS', 10000))
         self.temperature = float(self.config.get_value('AZURE_OPENAI_TEMPERATURE', 0.7))
 
         # Autogen agent configuration (base to be overridden)

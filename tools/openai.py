@@ -24,7 +24,8 @@ class OpenAIPlugin(ModelPlugin):
         _get_user_context = self._get_user_context()
 
         result = self.aoai.get_completion_messages(
-            messages=messages
+            messages=messages,
+            max_tokens=self.aoai.max_completion_tokens
         )
 
         return result
@@ -42,7 +43,8 @@ class OpenAIPlugin(ModelPlugin):
         _get_user_context = self._get_user_context()
 
         result = self.aoai.get_completion(
-            prompt=user_prompt
+            prompt=user_prompt,
+            max_tokens=self.aoai.max_completion_tokens
         )
 
         return result

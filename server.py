@@ -192,7 +192,7 @@ def load_tools_from_cosmos(container_name, document_id):
         
         if tool_config is None:
             logging.error(f"Tool configuration document {document_id} not found in container {container_name}.")
-            return
+            return loaded_tools
 
         loaded_tools.extend(load_tools_from_json(tool_config))
 
@@ -325,7 +325,9 @@ elif (mcp_mode == "fastapi" and mcp_transport == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logging.error(f"Error in SSE connection: {e}")
+            while isinstance(e, Exception) and hasattr(e, 'exceptions') and e.exceptions:
+                e = e.exceptions[0]
+                logging.error(f"Exception details: {e.exceptions[0].exceptions[0]} - {str(e)}")
 
     async def handle_root(request):
         return PlainTextResponse("Welcome to the GPT RAG MCP Server.")
@@ -373,7 +375,9 @@ elif (mcp_mode == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logging.error(f"Error in SSE connection: {e}")
+            while isinstance(e, Exception) and hasattr(e, 'exceptions') and e.exceptions:
+                e = e.exceptions[0]
+                logging.error(f"Exception details: {e.exceptions[0].exceptions[0]} - {str(e)}")
 
     # Define handler functions
     async def handle_sse(request):
@@ -395,7 +399,9 @@ elif (mcp_mode == "sse"):
         except Exception as e:
             #reinit server
             #server = kernel.as_mcp_server(server_name="sk")
-            logging.error(f"Error in SSE connection: {e}")
+            while isinstance(e, Exception) and hasattr(e, 'exceptions') and e.exceptions:
+                e = e.exceptions[0]
+                logging.error(f"Exception details: {e.exceptions[0].exceptions[0]} - {str(e)}")
 
     async def homepage(request: Request):
         return PlainTextResponse("Homepage")

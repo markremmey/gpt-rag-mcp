@@ -87,6 +87,16 @@ class CosmosDBClient:
             document = None
             logging.warning(f"[cosmosdb] could not update document: {e}", exc_info=True)
         return document
+
+    async def upsert_document(self, container, document) -> dict: 
+        container = self.db.get_container_client(container)
+        try:
+            document = container.upsert_item(body=document)
+            logging.info(f"[cosmosdb] document upserted.")
+        except Exception as e:
+            document = None
+            logging.warning(f"[cosmosdb] could not upsert document: {e}", exc_info=True)
+        return document
         
 class AsyncCosmosDBClient:
     """
