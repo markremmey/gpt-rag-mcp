@@ -108,8 +108,8 @@ config = get_config()
 Telemetry.configure_monitoring(config, APPLICATION_INSIGHTS_CONNECTION_STRING, APP_NAME)
 
 #MCP Settings
-mcp_port = config.get_value("AZURE_MCP_SERVER_PORT", default=80, type=int)    
-mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=240, type=int)
+mcp_port = config.get_value("AZURE_MCP_SERVER_PORT", default=80, type=int)
+mcp_timeout = config.get_value("AZURE_MCP_SERVER_TIMEOUT", default=600, type=int)
 mcp_mode = config.get_value("AZURE_MCP_SERVER_MODE", default="fastapi")
 mcp_transport = config.get_value("AZURE_MCP_SERVER_TRANSPORT", default="sse")
 mcp_host = config.get_value("AZURE_MCP_SERVER_HOST", default="local")
@@ -132,12 +132,6 @@ for deployment in json_model_deployments:
         api_version = deployment.get("version")
         endpoint = deployment.get("endpoint")
         break
-
-#OPEN AI SETTTINGS
-
-#deployment_name = config.get_value("AZURE_OPENAI_DEPLOYMENT_NAME", default="chat")
-#api_version = config.get_value("AZURE_OPENAI_API_VERSION")
-
 
 use_code_interpreter = config.get_value("USE_CODE_INTERPRETER", default=False, type=bool)
 pool_management_endpoint = config.get_value("POOL_MANAGEMENT_ENDPOINT", default="https://dynamicsessions.io")

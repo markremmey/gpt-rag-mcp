@@ -9,7 +9,8 @@ RUN . ~/pyvenv/bin/activate
 
 COPY . /
 
-RUN pip install -r requirements.txt --break-system-packages
+RUN pip install -r requirements.txt 
+#--break-system-packages
 
 RUN python3 -m spacy download en_core_web_lg
  

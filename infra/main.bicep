@@ -1,10 +1,19 @@
 targetScope = 'resourceGroup'
 
-import * as variables from 'variables.bicep'
+import * as const from 'constants/constants.bicep'
 
 param environmentName string
 param location string = resourceGroup().location
 param label string = 'gpt-rag'
+
+@description('Principal ID for role assignments. This is typically the Object ID of the user or service principal running the deployment.')
+param principalId string
+
+@description('Principal type for role assignments. This can be "User", "ServicePrincipal", or "Group".')
+param principalType string = 'User'
+
+@description('Tags to apply to all resources in the deployment')
+param deploymentTags object = {}
 
 param useUAI bool = true
 
@@ -13,7 +22,7 @@ var resourceToken string = toLower(uniqueString(subscription().id, environmentNa
 
 //get existing app config
 resource appconfig 'Microsoft.AppConfiguration/configurationStores@2024-06-15-preview' existing = {
-  name: '${variables._abbrs.configuration.appConfiguration}${resourceToken}'
+  name: '${const.abbrs.configuration.appConfiguration}${resourceToken}'
   
 }
 
@@ -85,12 +94,12 @@ resource appconfigKey 'Microsoft.AppConfiguration/configurationStores/keyValues@
 
 //add cosmos db account
 resource cosmosDBAccount 'Microsoft.DocumentDB/databaseAccounts@2025-05-01-preview' existing = {
-  name: '${variables._abbrs.databases.cosmosDBDatabase}${resourceToken}'
+  name: '${const.abbrs.databases.cosmosDBDatabase}${resourceToken}'
 }
 
 //get the cosmos database
 resource cosmosDBDatabase 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases@2025-05-01-preview' existing = {
-  name: '${variables._abbrs.databases.cosmosDBDatabase}db${resourceToken}'
+  name: '${const.abbrs.databases.cosmosDBDatabase}db${resourceToken}'
   parent: cosmosDBAccount
 }
 
@@ -111,25 +120,25 @@ resource cosmosContainer 'Microsoft.DocumentDB/databaseAccounts/sqlDatabases/con
 
 //get the azure container apps service
 resource containerEnv 'Microsoft.App/managedEnvironments@2025-02-02-preview' existing = {
-  name: '${variables._abbrs.containers.containerAppsEnvironment}${resourceToken}'
+  name: '${const.abbrs.containers.containerAppsEnvironment}${resourceToken}'
 }
 
 
 //MCP ACA User Managed Identity
 module mcpAcaUAI 'br/public:avm/res/managed-identity/user-assigned-identity:0.4.0' = {
-  name: '${variables._abbrs.security.managedIdentity}${variables._abbrs.containers.containerApp}${resourceToken}-mcp'
+  name: '${const.abbrs.security.managedIdentity}${const.abbrs.containers.containerApp}${resourceToken}-mcp'
   params: {
     // Required parameters
-    name: '${variables._abbrs.security.managedIdentity}${variables._abbrs.containers.containerApp}${resourceToken}-mcp'
+    name: '${const.abbrs.security.managedIdentity}${const.abbrs.containers.containerApp}${resourceToken}-mcp'
     // Non-required parameters
     location: location
   }
 }
 
 module containerApps 'br/public:avm/res/app/container-app:0.17.0' = {
-  name: '${variables._abbrs.containers.containerApp}${resourceToken}-mcp'
+  name: '${const.abbrs.containers.containerApp}${resourceToken}-mcp'
   params: {
-    name: '${variables._abbrs.containers.containerApp}${resourceToken}-mcp'
+    name: '${const.abbrs.containers.containerApp}${resourceToken}-mcp'
     location:              location
     environmentResourceId: containerEnv.id
 
@@ -183,5 +192,17 @@ module containerApps 'br/public:avm/res/app/container-app:0.17.0' = {
     tags: {
       'azd-service-name': 'mcp'
     }
+  }
+}
+
+// Cosmos DB Account - Cosmos DB Built-in Data Contributor -> Executor
+module assignCosmosDBCosmosDbBuiltInDataContributorExecutor 'modules/security/cosmos-data-plane-role-assignment.bicep' = {
+  name: 'assignCosmosDBCosmosDbBuiltInDataContributorExecutor'
+  params: {
+    #disable-next-line BCP318
+    cosmosDbAccountName: cosmosDBAccount.name
+    principalId: useUAI ? mcpAcaUAI.outputs.clientId : containerApps.outputs.systemAssignedMIPrincipalId
+    roleDefinitionGuid: const.roles.CosmosDBBuiltInDataContributor.guid
+    scopePath: '/subscriptions/${subscription().subscriptionId}/resourceGroups/${resourceGroup().name}/providers/Microsoft.DocumentDB/databaseAccounts/${const.abbrs.databases.cosmosDBDatabase}${resourceToken}/dbs/${const.abbrs.databases.cosmosDBDatabase}db${resourceToken}'
   }
 }
