@@ -27,14 +27,14 @@ uvicorn
 python-dotenv
 
 #tools support
-autogen-agentchat==0.5.7
-autogen_ext==0.5.7
+#autogen-agentchat==0.5.7
+#autogen_ext==0.5.7
 tiktoken
 sqlparse
 
 azure-servicebus
 azure-eventgrid
-git+https://github.com/givenscj/graphrag.git#egg=graphrag
+#git+https://github.com/givenscj/graphrag.git#egg=graphrag
 #graphrag
 pyodbc
 
