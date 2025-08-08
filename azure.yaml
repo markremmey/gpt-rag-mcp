@@ -6,14 +6,7 @@ metadata:
 infra:
   provider: bicep
   path: infra
-  module: main
-services:
-  mcpServer:
-    project: .
-    language: python
-    host: appservice
-# infrastructure is pulled from the main azure-gpt-rag repo with a hook.
-# If you previously provisioned infrastructure, use the same azd-env name, subscription and location to deploy data ingest to that infrastructure.        
+  module: main  
 hooks:
   predeploy:
     posix:
