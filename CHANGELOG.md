@@ -3,6 +3,8 @@
 All notable changes to this project will be documented in this file.  
 This format follows [Keep a Changelog](https://keepachangelog.com/) and adheres to [Semantic Versioning](https://semver.org/).
 
+## [v0.2.2] - In progress
+
 ## [v0.2.1] - 2025-08-08
 ### Changed
 - Updated azure.yaml to support azd deploy targeting the container app.
