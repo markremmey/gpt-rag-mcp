@@ -225,6 +225,19 @@ if (use_code_interpreter):
 
 server = kernel.as_mcp_server(server_name="sk")
 
+from mcp.types import Tool as MCPTypedTool, ListToolsResult, TextPrompt, ListPromptsResult
+
+@server.list_tools()
+async def list_tools_handler() -> list[MCPTypedTool]:
+    return [
+        MCPTypedTool(
+            name="health.ping",
+            description="Returns a static health confirmation.",
+            inputSchema={"type": "object", "properties": {}, "required": []},
+            annotations=None,
+        )
+    ]
+
 logging.info(f"Starting MCP server in {mcp_mode} mode on port {mcp_port}")
 if (mcp_mode == "stdio"):
     # Run as stdio server
