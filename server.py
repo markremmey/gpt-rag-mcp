@@ -211,6 +211,7 @@ def load_tools_from_file(file_name):
 loaded_tools = []
 loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config"))
 loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config_custom"))
+loaded_tools.extend(load_tools_from_file("tool_config.json"))
 
 if (use_code_interpreter):
     logging.info("Loading Code Interpreter")
