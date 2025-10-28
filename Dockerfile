@@ -1,22 +1,28 @@
-FROM mcr.microsoft.com/devcontainers/python:dev-3.12
+FROM python:3.12-slim
 
-RUN apt-get update && apt-get install -y build-essential
-RUN apt-get install unixodbc -y
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    VIRTUAL_ENV=/opt/venv
+RUN python -m venv $VIRTUAL_ENV
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-RUN python3 -m venv ~/pyvenv --system-site-packages
-RUN . ~/pyvenv/bin/activate
-#RUN pip install --upgrade pip
+# System deps
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    unixodbc \
+    && rm -rf /var/lib/apt/lists/*
 
-COPY . /
+# Copy requirements first to leverage layer caching
+COPY requirements.txt /tmp/requirements.txt
 
-RUN pip install -r requirements.txt 
-#--break-system-packages
+# Install Python deps (removed spaCy/model logic)
+RUN --mount=type=cache,target=/root/.cache/pip \
+    pip install --upgrade pip && \
+    pip install --no-cache-dir -r /tmp/requirements.txt
 
-RUN python3 -m spacy download en_core_web_lg
- 
-# Expose the port your app runs on
+# Copy app source
+COPY . /app
+WORKDIR /app
+
 EXPOSE 80
- 
-# Define the command to run your app
-#CMD ["gunicorn", "-b", "0.0.0.0:80", "-k", "uvicorn.workers.UvicornWorker", "server:app"]
 CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]

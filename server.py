@@ -212,6 +212,7 @@ loaded_tools = []
 loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config"))
 loaded_tools.extend(load_tools_from_cosmos("mcp", "tool_config_custom"))
 loaded_tools.extend(load_tools_from_file("tool_config.json"))
+logging.info(f"MCP server loaded {len(loaded_tools)} tools: {[t.__class__.__name__ for t in loaded_tools]}")
 
 if (use_code_interpreter):
     logging.info("Loading Code Interpreter")

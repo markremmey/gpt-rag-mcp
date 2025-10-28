@@ -55,8 +55,8 @@ pandas
 azure-ai-projects
 
 #presidio
-presidio_analyzer 
-presidio_anonymizer
+# presidio_analyzer 
+# presidio_anonymizer
 
 ##wikipedia
 wikipedia
