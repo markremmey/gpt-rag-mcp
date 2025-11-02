@@ -1,7 +1,9 @@
 # GPT RAG Semantic Kernel Model Context Protocol Server
+Part of [GPT‑RAG](https://aka.ms/gpt-rag)
 
-Welcome to the GPT-RAG Model Context Protocol (MCP) Server for the GPT-RAG series of repos. Note these currently point at the `givenscj` fork due to some reorganizing of the repos. The original repos are available in the `azure` organization, but will not currenlty work with the MCP server.
+The GPT-RAG MCP service deploys an MCP server that is used to enable agentic features in AI Chat Applications. Documentation on the Model Context Protocol can be found here: [Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro)
 
+Below aree links to the other repos to enable a full chat application solution that leverages this MCP server.
 - [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration branch]
 - [GPT-RAG-AGENTIC](https://github.com/givenscj/gpt-rag-agentic)
 - [GPT-RAG-ORCHESTATOR](https://github.com/givenscj/gpt-rag-orchestrator)
@@ -61,24 +63,6 @@ Model Context Protocol (MCP) Flow
 
 ![Model Context Protocol (MCP) Flow](media/mcp-flow.png "Model Context Protocol (MCP) Flow")
 
-## Testing
-
-- Clone the repo to `c:\github\azure`
-- Run the following PowerShell to start the MCP Inspector server locally
-
-```Powershell
-npx @modelcontextprotocol/inspector uv --directory c:/github/azure/gpt-rag-mcp run server.py
-```
-
-- Create a new virtual environment and install the requirements
-
-```python
-python venv .venv
-./.venv/scripts/activate.ps1
-python -m pip install -r requirements.txt
-```
-
-- Using Visual Studio, use the `Run MCP Server` debug option to start the server
 
 ## Configuration
 
@@ -201,3 +185,22 @@ The processing task steps are:
 	
 Using the task steps defined, start with the bronze container and process all files returned.
 ```
+
+## Testing
+
+- Clone the repo to `c:\github\azure`
+- Run the following PowerShell to start the MCP Inspector server locally
+
+```Powershell
+npx @modelcontextprotocol/inspector uv --directory c:/github/azure/gpt-rag-mcp run server.py
+```
+
+- Create a new virtual environment and install the requirements
+
+```python
+python venv .venv
+./.venv/scripts/activate.ps1
+python -m pip install -r requirements.txt
+```
+
+- Using Visual Studio, use the `Run MCP Server` debug option to start the server
