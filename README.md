@@ -94,9 +94,9 @@ Run the following commands to provision and deploy the MCP server:
 ### Clone the GPT-RAG repo
 
 ```PowerShell
-mkdir c:\temp
-cd c:\temp
-git clone https://github.com/givenscj/GPT-RAG
+mkdir c:\gpt-rag-deployment
+cd c:\gpt-rag-deployment
+git clone https://github.com/azure/GPT-RAG
 cd GPT-RAG
 ```
 
@@ -106,18 +106,7 @@ cd GPT-RAG
 
 ```text
 azd env set AZURE_USE_MCP true
-```
-
-- If you want to deploy the ACA or AKS versions as containers, you will need to set one of the following:
-
-```text
-azd env set AZURE_USE_ACA true
-```
-
-OR
-
-```text
-azd env set AZURE_USE_AKS true
+azd env set USE_CAPP_API_KEY true
 ```
 
 - And run azd provision:
@@ -125,44 +114,29 @@ azd env set AZURE_USE_AKS true
 ```PowerShell
 azd provision
 ```
-
-### Deploy the MCP Server
-
-```PowerShell
-azd deploy mcpServer
-```
-
-### Deploy the Orchestrator
-
-```PowerShell
-azd deploy orchestrator
-```
-
-### Deploy the FrontEnd/UI
-
-```PowerShell
-azd deploy frontend
-```
-
 ### Set the App Configuration Variables
-
 - Browse to the Azure Portal and your resource group
 - Select the App Configuration resource
 - Set the basic MCP variables:
 
 ```python
-AZURE_MCP_SERVER_URL=
-AZURE_MCP_SERVER_TIMEOUT=
-MCP_APP_APIKEY=
-AUTOGEN_ORCHESTRATION_STRATEGY=mcp
+AGENT_STRATEGY=mcp
+MCP_APP_APIKEY=<your-MCP-API-key> 
+AZURE_MCP_SERVER_PORT=80
 ```
+- MCP_APP_APIKEY Can be referenced via key vault
+- You may need to restart the replica in azure cotainer app or redeploy orchestrator component for the variable change above to be effective
+- Sometimes the App config values can experience a lag after updating. When troubleshooting it may be helpful to temporarily hardcode the agent strategy or the port to ensure that they are updated.
 
-- Set the following variables to enable code interpreter:
+### Deploy Services individually
+- cd gpt-rag-orchestrator
+- azd deploy (ensure .azure directory is present in root)
+- Repeat for gpt-rag-orchestrator, gpt-rag-ui, etc.
 
-```python
-USE_CODE_INTERPRETER=true
-POOL_MANAGEMENT_ENDPOINT=<URL_TO_SESSION>
-```
+
+## Check Deployment
+- By default the wikipedia search tool will deploy. Test the deployment by entering a query into the frontend such as "Summarize the wikipedia article on the Roman Empire"
+- Inspect the log stream for the MCP Container and the orchestrator container to ensure that the MCP tools are being invoked.
 
 ### Agentic Prompt Example
 

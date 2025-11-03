@@ -32,21 +32,6 @@ ENV/
 *.log
 .DS_Store
 
-# Not needed at runtime
-docs/
-notebooks/
-media/
-infra/
-scripts/
-tests/
-samples/
-configuration/
-telemetry/      # If only used in dev; remove if needed
-tools/
-inputs/
-mcp/            # If code is used remove this exclusion
-event_store.py  # If required keep it; example of optional exclude
-
 # Azure / deployment metadata not required in container runtime
 CHANGELOG.md
 CODE_OF_CONDUCT.md
