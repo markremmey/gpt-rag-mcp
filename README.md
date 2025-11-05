@@ -9,8 +9,6 @@ Below aree links to the other repos to enable a full chat application solution t
 - [GPT-RAG-UI](https://github.com/givenscj/gpt-rag-ui)
 - [GPT-RAG-INGESTION](https://github.com/givenscj/gpt-rag-ingestion)
 
-This code enables the exposing of tools, prompts and resources to the [GPT-RAG-AGENITC](https://github.com/givenscj/gpt-rag-agentic) orchestrator and can be deployed as a Web App, ACA Container or AKS deployment.
-
 ## Pre-requistes
 
 - Visual Studio Code
@@ -30,14 +28,6 @@ We have started with a common set of tools that we use for the [GPT-RAG-AGENITC]
 - Document Intelligence
 - Remote MCP Servers (such as custom Rest APIs exposed by APIM)
 - NL2SQL
-
-## Future Tools
-
-- Databricks
-- Fabric
-- Office Documents (Excel/Word/PowerPoint)
-- Rest APIs
-- SharePoint
 
 ## Documentation
 
@@ -61,25 +51,10 @@ Model Context Protocol (MCP) Flow
 
 Tools are dynamically loaded using Python runtime instantiation techniques.  The agents and tools that are loaded are driven by the `tool_config.json` file. NOTE: This will be moved to cosmos in the future.
 
-## Deployment
 
-By default, GPT-RAG-MCP expects a landing zone to be in place for deployment.  This landing zone is driven by the GPT-RAG repo's bicep files.  Once you have deployed the landing zone using the `AZURE_USE_MCP=true` as an AZD ENV Variable, you will have the necessary resource to perform the following:
+## Full Deployment steps
 
-- Open a Visual Studio Code terminal
-- Run the following:
-
-```powershell
-azd deploy mcpServer
-```
-
-The code will be packaged and deployed to the App Service with the tag `azd-service-name:mcpServer`
-
-From there, you can interact with the MCP server over `SSE` via the `https://webappname.azurewebsites.net/sse` endpoint using the MCP inspector you have running from the commands above.
-
-
-## Full manual deployment steps
-
-Run the following commands to provision and deploy the MCP server:
+Run the following commands to provision and deploy the MCP server as a part of the larger [GPT RAG](https://github.com/azure/gpt-rag) solution
 
 ### Clone the GPT-RAG repo
 
