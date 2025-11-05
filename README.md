@@ -5,9 +5,7 @@ The GPT-RAG MCP service deploys an MCP server that is used to enable agentic fea
 
 Below aree links to the other repos to enable a full chat application solution that leverages this MCP server.
 - [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration branch]
-- [GPT-RAG-AGENTIC](https://github.com/givenscj/gpt-rag-agentic)
 - [GPT-RAG-ORCHESTATOR](https://github.com/givenscj/gpt-rag-orchestrator)
-- [GPT-RAG-FRONTEND](https://github.com/givenscj/gpt-rag-frontend)
 - [GPT-RAG-UI](https://github.com/givenscj/gpt-rag-ui)
 - [GPT-RAG-INGESTION](https://github.com/givenscj/gpt-rag-ingestion)
 
@@ -64,7 +62,7 @@ Model Context Protocol (MCP) Flow
 ![Model Context Protocol (MCP) Flow](media/mcp-flow.png "Model Context Protocol (MCP) Flow")
 
 
-## Configuration
+## MCP Tool Configuration
 
 Tools are dynamically loaded using Python runtime instantiation techniques.  The agents and tools that are loaded are driven by the `tool_config.json` file. NOTE: This will be moved to cosmos in the future.
 
