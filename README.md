@@ -4,7 +4,7 @@ Part of [GPT‑RAG](https://aka.ms/gpt-rag)
 The GPT-RAG MCP service deploys an MCP server that is used to enable agentic features in AI Chat Applications. Documentation on the Model Context Protocol can be found here: [Model Context Protocol](https://modelcontextprotocol.io/docs/getting-started/intro)
 
 Below aree links to the other repos to enable a full chat application solution that leverages this MCP server.
-- [GPT-RAG](https://github.com/givenscj/gpt-rag) - [Use the cjg-app-configuration branch]
+- [GPT-RAG](https://github.com/givenscj/gpt-rag)
 - [GPT-RAG-ORCHESTATOR](https://github.com/givenscj/gpt-rag-orchestrator)
 - [GPT-RAG-UI](https://github.com/givenscj/gpt-rag-ui)
 - [GPT-RAG-INGESTION](https://github.com/givenscj/gpt-rag-ingestion)
@@ -48,11 +48,6 @@ We have started with a common set of tools that we use for the [GPT-RAG-AGENITC]
   - [Function Triggers](/docs/samples/function_trigger.md)
 
 ## Architecture
-
-Zero Trust (ZTA)
-
-![Zero Trust Architecture](media/architecture-zta.png "Zero Trust Architecture")
-
 Model Context Protocol (MCP) Server
 
 ![Model Context Protocol (MCP) Server](media/mcp-server.png "Model Context Protocol (MCP) Server")
@@ -81,9 +76,6 @@ The code will be packaged and deployed to the App Service with the tag `azd-serv
 
 From there, you can interact with the MCP server over `SSE` via the `https://webappname.azurewebsites.net/sse` endpoint using the MCP inspector you have running from the commands above.
 
-## Container Images (Preview)
-
-We will be publishing a set of container images that represent the `golden` images based on the repo releases. You will be able to directly pull from these public container registries for fast deployment
 
 ## Full manual deployment steps
 
