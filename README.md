@@ -41,7 +41,7 @@ MCP_APP_APIKEY=<your-MCP-API-key>
 AZURE_MCP_SERVER_PORT=80
 ```
 - MCP_APP_APIKEY Can be referenced via key vault
-- You may need to restart the replica in azure cotainer app or redeploy orchestrator component for the variable change above to be effective
+- You may need to restart the replica in azure container app or redeploy orchestrator component for the variable change above to be effective
 - Sometimes the App config values can experience a lag after updating. When troubleshooting it may be helpful to temporarily hardcode the agent strategy or the port to ensure that they are updated.
 
 
@@ -83,7 +83,7 @@ azd env set USE_CAPP_API_KEY true
 ```powershell
 git clone https://github.com/Azure/gpt-rag-mcp.git
 $env:APP_CONFIG_ENDPOINT = "https://<your-app-config-name>.azconfig.io"
-cd gpt-rag-orchestrator
+cd gpt-rag-mcp
 .\scripts\deploy.ps1
 ```
 
@@ -102,7 +102,7 @@ MCP Inspector is a tool to test MCP servers using a standard client tool. Find d
 Local Deployment Steps
 - Create and activate the python virtual environment
 ```python
-python venv .venv
+python -m venv .venv
 ./.venv/scripts/activate.ps1
 python -m pip install -r requirements.txt
 ```
