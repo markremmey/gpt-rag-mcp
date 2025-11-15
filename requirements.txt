@@ -1,73 +1,43 @@
-#mcp[cli]==1.8.1  #manually copied into app package (with modifications)
-semantic-kernel==1.31.0
-
-azure-keyvault-secrets
-azure-cosmos
-azure-identity
-azure-mgmt-web
-azure-mgmt-storage
-azure-storage-blob
-azure.appconfiguration
+# Azure SDK dependencies
+azure-keyvault-secrets==4.8.0
+azure-cosmos==4.5.1
+azure-identity==1.21.0
+azure-mgmt-web==8.0.0
+azure-mgmt-storage==22.1.1
+azure-storage-blob==12.25.1
+azure-appconfiguration==1.7.1
 azure.appconfiguration.provider
+azure-ai-projects==1.1.0b3
+azure-ai-agents>=1.2.0b4
+azure-search-documents==11.7.0b1
+
+# AI and NLP dependencies
+tiktoken==0.7.0
+openai==1.76.2
+prompty==0.1.50
+
+# Semantic Kernel dependencies
+semantic-kernel[mcp]==1.34.0
+aiohttp==3.12.14
+pydantic==2.11.4
+
+# Utility dependencies
+tenacity
+jinja2==3.1.6
+
+# For evaluation
+requests==2.32.4
+python-dotenv==1.1.0
+
+# fastapi
+fastapi==0.115.12
+uvicorn==0.34.1
+
+# NL2SQL dependencies
+sqlparse==0.5.1
+pyodbc==5.1.0
+#opentelemetry
 azure-monitor-opentelemetry
 azure-monitor-opentelemetry-exporter
-azure-cognitiveservices-speech
-
-tenacity
-uv
-
-fastapi
-#fastapi-mcp==0.3.4
-sse_starlette
-httpx_sse
-
-gunicorn
-uvicorn
-
-python-dotenv
-
-#tools support
-#autogen-agentchat==0.5.7
-#autogen_ext==0.5.7
-tiktoken
-sqlparse
-
-azure-servicebus
-azure-eventgrid
-#git+https://github.com/givenscj/graphrag.git#egg=graphrag
-#graphrag
-pyodbc
-
-#excel
-openpyxl
-
-#word
-python-docx
-
-#databricks
-pyspark==3.4.4
-#databricks-sdk
-#databricks-connect==12.2.45
-#databricks-sql-connector
-pandas
-
-#code interpreter
-azure-ai-projects
-
-#presidio
-presidio_analyzer 
-presidio_anonymizer
-
-##wikipedia
-wikipedia
-
-#postgresql
-psycopg[binary]
-pyodbc
-
-##Bing
-azure-cognitiveservices-search-websearch
-
-#neo4j
-neo4j-graphrag
-neo4j-graphrag[openai]
+opentelemetry-instrumentation-httpx==0.52b1
+opentelemetry-instrumentation-fastapi
