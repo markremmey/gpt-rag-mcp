@@ -2,9 +2,9 @@ from setuptools import setup, find_packages
 
 setup(
     name='gpt-rag-mcp',
-    version='0.0.1',
+    version='0.2.0',
     author='Microsoft Corporation',
-    author_email='v-cgivens@microsoft.com',
+    author_email='markremmey@microsoft.com',
     description='GPT RAG MCP (Model Context Protocol) library',
     packages=find_packages(
         exclude=['tools.custom*', 'agents.custom.*']),

@@ -1,4 +1,6 @@
-from src import server
-from src.functions import LightsPlugin, sampling_function
+def main():
+    print("Hello from mcp-server-demo!")
 
-server = server
+
+if __name__ == "__main__":
+    main()
