@@ -1,28 +1,37 @@
-FROM python:3.12-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    VIRTUAL_ENV=/opt/venv
-RUN python -m venv $VIRTUAL_ENV
-ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+FROM python:3.12-slim AS base
 
-# System deps
+# Install curl (may be useful later) and certificates; keep image slim.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    unixodbc \
+    curl ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first to leverage layer caching
-COPY requirements.txt /tmp/requirements.txt
+# Install uv via PyPI (wheel provides compiled binary). This is more reliable in slim images.
+RUN pip install --no-cache-dir uv \
+    && uv --version
 
-# Install Python deps (removed spaCy/model logic)
-RUN --mount=type=cache,target=/root/.cache/pip \
-    pip install --upgrade pip && \
-    pip install --no-cache-dir -r /tmp/requirements.txt
-
-# Copy app source
-COPY . /app
 WORKDIR /app
 
+# Copy only project metadata first for better layer caching of dependencies.
+COPY pyproject.toml README.md ./
+# If you already have a lock file committed, copy it too for reproducible builds.
+# (Uncomment next line when uv.lock exists)
+# COPY uv.lock ./
+
+# Sync (install) dependencies into a managed .venv. --frozen will fail if lock differs.
+# Use --no-dev if you have dev dependencies you don't want in the prod image.
+RUN uv sync --no-dev
+
+# Now copy the application source code (only files likely to change go later for cache efficiency).
+COPY . .
+
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1
+
+# Container Apps / general containers expect listening on 0.0.0.0:<port>
 EXPOSE 80
-CMD ["uvicorn", "server:app", "--host", "0.0.0.0", "--port", "80"]
+
+ENV PYTHONPATH="/app/src"
+
+# Run the MCP server using uv so it uses the synced environment.
+CMD ["uv", "run", "uvicorn", "src.server:app", "--host", "0.0.0.0", "--port", "80", "--log-level", "info"]
