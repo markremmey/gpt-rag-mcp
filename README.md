@@ -20,6 +20,24 @@ The machine used to customize and or deploy the service should have:
 * VS Code (recommended): [Download VS Code](https://code.visualstudio.com/download)
 </details>
 
+### Deploying the app with azd (recommended)
+
+##### Set the required App Configuration Variables in Azure Portal
+- Browse to the Azure Portal and your resource group
+- Select the App Configuration resource
+- Set the basic MCP variables:
+
+```python
+AGENT_STRATEGY=mcp
+MCP_APP_APIKEY=<your-MCP-API-key> 
+AZURE_MCP_SERVER_PORT=80
+```
+- MCP_APP_APIKEY Can be referenced via key vault
+- You may need to restart the replica in azure container app or redeploy orchestrator component for the variable change above to be effective
+- Sometimes the App config values can experience a lag after updating. When troubleshooting it may be helpful to temporarily hardcode the agent strategy or the port to ensure that they are updated.
+
+
+
 ##### Initialize the template:
 - Ensure the .azure directory is present in the root
 - `azd deploy`
@@ -44,9 +62,21 @@ cd gpt-rag-mcp
 
 ### Start MCP Model Inspector to Test MCP connection
 
-- Run the following command in bash or pwsh
-```bash
-npx @modelcontextprotocol/inspector
+
+## Testing using MCP Inspector 
+MCP Inspector is a tool to test MCP servers using a standard client tool. Find documentation here: [MCP Inspector](https://modelcontextprotocol.io/docs/tools/inspector)
+
+Local Deployment Steps
+- Create and activate the python virtual environment
+```python
+python -m venv .venv
+./.venv/scripts/activate.ps1
+python -m pip install -r requirements.txt
+```
+- Run the following PowerShell to start the MCP Inspector server locally
+```Powershell
+cd gpt-rag-mcp
+npx @modelcontextprotocol/inspector uv run server.py
 ```
 - Click on the link displayed in terminal that says "MCP Inspector is up and running at..."
 - Plug in your container Application URL (found on container app overview page in Azure portal) followed by `/mcp` (e.g. `https://<container_app_name>.eastus.azurecontainerapps.io/mcp`)
