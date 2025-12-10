@@ -5,8 +5,11 @@ from contextlib import asynccontextmanager
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
 from starlette.routing import Mount, Route
+from starlette.middleware.cors import CORSMiddleware
 
 from mcp.server.fastmcp import FastMCP
+from tools.wikipedia import search_wikipedia
+from prompts.greeting import greet_user
 
 # ---- MCP server ----
 mcp = FastMCP("Demo")
@@ -15,18 +18,15 @@ mcp = FastMCP("Demo")
 def add(a: int, b: int) -> int:
     return a + b
 
-@mcp.resource("greeting://{name}")
-def get_greeting(name: str) -> str:
-    return f"Hello, {name}!"
+@mcp.tool()
+def wikipedia_search(query: str) -> list[str]:
+    """Search Wikipedia for articles matching the query."""
+    return search_wikipedia(query)
 
 @mcp.prompt()
-def greet_user(name: str, style: str = "friendly") -> str:
-    styles = {
-        "friendly": "Please write a warm, friendly greeting",
-        "formal": "Please write a formal, professional greeting",
-        "casual": "Please write a casual, relaxed greeting",
-    }
-    return f"{styles.get(style, styles['friendly'])} for someone named {name}."
+def greet_user_prompt(name: str, style: str = "friendly") -> str:
+    """Generate a greeting prompt for someone."""
+    return greet_user(name, style)
 
 # ---- Lifespan: start/stop MCP session manager ----
 @asynccontextmanager
@@ -50,4 +50,14 @@ app = Starlette(
         Mount("/", app=mcp.streamable_http_app()),
         Mount("/mcp", app=mcp.streamable_http_app()),  # alt path
     ],
+)
+
+# Add CORS middleware - must be added AFTER app creation but order matters
+app = CORSMiddleware(
+    app=app,
+    allow_origins=["*"],  # In production, specify the Inspector's origin
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    expose_headers=["mcp-session-id", "content-type"],
 )
