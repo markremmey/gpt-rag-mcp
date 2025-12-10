@@ -1,8 +1,0 @@
-__pycache__/
-*.pyc
-.git/
-.env
-.venv/
-dist/
-build/
-.pytest_cache/
